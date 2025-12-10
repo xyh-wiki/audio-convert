@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { FFmpeg } from "../vendor/ffmpeg/classes.js";
 import { AdvancedOptions, ConversionTask, OutputFormat } from "../types";
-import coreJsAsset from "../assets/ffmpeg/umd/ffmpeg-core.js?url";
-import coreWasmAsset from "../assets/ffmpeg/umd/ffmpeg-core.wasm?url";
-import coreWorkerAsset from "../assets/ffmpeg/umd/ffmpeg-core.worker.js?url";
+import coreJsAsset from "../assets/ffmpeg/esm/ffmpeg-core.js?url";
+import coreWasmAsset from "../assets/ffmpeg/esm/ffmpeg-core.wasm?url";
+import coreWorkerAsset from "../assets/ffmpeg/esm/ffmpeg-core.worker.js?url";
 
 type ProgressHandler = (value: number) => void;
 
@@ -24,16 +24,12 @@ const makeBase = (subdir: "esm" | "umd") => {
 };
 
 const localEsmBase = makeBase("esm");
-const localUmdBase = makeBase("umd");
 
 const CORE_SOURCES: CoreSource[] = [
-  { coreURL: coreJsAsset, wasmURL: coreWasmAsset, workerURL: coreWorkerAsset, label: "bundled assets" },
+  { coreURL: coreJsAsset, wasmURL: coreWasmAsset, workerURL: coreWorkerAsset, label: "bundled esm assets" },
   { base: localEsmBase, label: "local esm" },
-  { base: localUmdBase, label: "local umd" },
   { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg esm" },
-  { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd", label: "unpkg umd" },
-  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr esm" },
-  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd", label: "jsdelivr umd" }
+  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr esm" }
 ];
 
 const mimeByFormat: Record<OutputFormat, string> = {
