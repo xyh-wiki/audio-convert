@@ -17,7 +17,8 @@ commands = [
 
 [phases.start]
 # Use Caddy to serve dist with proper headers for FFmpeg
-command = "caddy run --config /app/Caddyfile"
+# Note: Nixpacks copies config to /assets/ during build, not /app/
+command = "caddy run --config /assets/Caddyfile --adapter caddyfile"
 
 [expose]
 port = 3000
