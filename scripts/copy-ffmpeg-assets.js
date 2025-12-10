@@ -18,50 +18,56 @@ const publicFfmpegDir = path.join(projectRoot, "public", "ffmpeg");
 const copyDir = (src, dest) => {
   if (!fs.existsSync(src)) {
     console.warn(`Source directory not found: ${src}`);
-    return;
+    return 0;
   }
 
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, { recursive: true });
-  }
+  let count = 0;
 
-  const files = fs.readdirSync(src, { recursive: true });
-  for (const file of files) {
-    const srcPath = path.join(src, file);
-    const destPath = path.join(dest, file);
-
-    const stat = fs.statSync(srcPath);
-    if (stat.isDirectory()) {
-      if (!fs.existsSync(destPath)) {
-        fs.mkdirSync(destPath, { recursive: true });
+  const walk = (currentSrc, currentDest) => {
+    const entries = fs.readdirSync(currentSrc, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = path.join(currentSrc, entry.name);
+      const destPath = path.join(currentDest, entry.name);
+      if (entry.isDirectory()) {
+        if (!fs.existsSync(destPath)) fs.mkdirSync(destPath, { recursive: true });
+        walk(srcPath, destPath);
+      } else if (entry.isFile()) {
+        const destDirPath = path.dirname(destPath);
+        if (!fs.existsSync(destDirPath)) fs.mkdirSync(destDirPath, { recursive: true });
+        fs.copyFileSync(srcPath, destPath);
+        // eslint-disable-next-line no-console
+        console.log(`Copied: ${destPath}`);
+        count += 1;
       }
-    } else {
-      const destDirPath = path.dirname(destPath);
-      if (!fs.existsSync(destDirPath)) {
-        fs.mkdirSync(destDirPath, { recursive: true });
-      }
-      fs.copyFileSync(srcPath, destPath);
-      console.log(`Copied: ${destPath}`);
     }
-  }
+  };
+
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+  walk(src, dest);
+  return count;
 };
 
 try {
   const ffmpegDistDir = path.join(distDir, "ffmpeg");
+  let total = 0;
 
   // Copy from src/assets/ffmpeg
   if (fs.existsSync(srcAssetsDir)) {
     console.log(`Copying FFmpeg assets from ${srcAssetsDir}...`);
-    copyDir(srcAssetsDir, ffmpegDistDir);
+    total += copyDir(srcAssetsDir, ffmpegDistDir);
   }
 
   // Copy from public/ffmpeg
   if (fs.existsSync(publicFfmpegDir)) {
     console.log(`Copying FFmpeg assets from ${publicFfmpegDir}...`);
-    copyDir(publicFfmpegDir, ffmpegDistDir);
+    total += copyDir(publicFfmpegDir, ffmpegDistDir);
   }
 
-  console.log("FFmpeg assets copy completed successfully!");
+  if (total === 0) {
+    console.warn("No FFmpeg assets were copied — check that src/assets/ffmpeg or public/ffmpeg exist and contain files.");
+  } else {
+    console.log(`FFmpeg assets copy completed successfully! ${total} files copied.`);
+  }
 } catch (error) {
   console.error("Error copying FFmpeg assets:", error);
   process.exit(1);
