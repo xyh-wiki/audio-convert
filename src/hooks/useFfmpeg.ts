@@ -72,6 +72,32 @@ const buildCoreSources = (): CoreSource[] => {
   ];
 };
 
+const checkAssetReachability = async (
+  coreURL: string,
+  wasmURL: string,
+  workerURL: string
+): Promise<{ ok: boolean; errors: string[] }> => {
+  const errors: string[] = [];
+  
+  for (const [name, url] of [
+    ["core", coreURL],
+    ["wasm", wasmURL],
+    ["worker", workerURL]
+  ] as const) {
+    try {
+      const res = await fetch(url, { method: "HEAD", mode: "cors" });
+      if (!res.ok) {
+        errors.push(`${name}: HTTP ${res.status} ${res.statusText} (${url})`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${name}: ${msg} (${url})`);
+    }
+  }
+  
+  return { ok: errors.length === 0, errors };
+};
+
 const mimeByFormat: Record<OutputFormat, string> = {
   mp3: "audio/mpeg",
   wav: "audio/wav",
@@ -156,7 +182,7 @@ export const useFfmpeg = () => {
     setIsLoading(true);
     try {
       let loaded = false;
-      const failures: { label: string; coreURL: string; wasmURL: string; workerURL: string; error: unknown }[] = [];
+      const failures: { label: string; coreURL: string; wasmURL: string; workerURL: string; reachability?: string[]; error: unknown }[] = [];
       const CORE_SOURCES = buildCoreSources();
       
       for (const source of CORE_SOURCES) {
@@ -166,6 +192,17 @@ export const useFfmpeg = () => {
           const wasmURL = "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL;
           const workerURL =
             "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL;
+          
+          // Pre-check asset reachability before attempting to load
+          const reachability = await checkAssetReachability(coreURL, wasmURL, workerURL);
+          if (!reachability.ok) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `Asset reachability check failed for ${source.label}:`,
+              reachability.errors
+            );
+          }
+          
           ffmpeg.on("log", ({ message }) => {
             if (import.meta.env.DEV) {
               // eslint-disable-next-line no-console
@@ -181,23 +218,34 @@ export const useFfmpeg = () => {
           loaded = true;
           break;
         } catch (err) {
+          const reachability = await checkAssetReachability(
+            "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL,
+            "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL,
+            "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL
+          );
           failures.push({
             label: "base" in source ? source.base : source.label,
             coreURL: "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL,
             wasmURL: "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL,
             workerURL: "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL,
+            reachability: reachability.errors,
             error: err
           });
           // eslint-disable-next-line no-console
-          console.error("FFmpeg load failed from", "base" in source ? source.base : source.label, err);
+          console.error("FFmpeg load failed from", "base" in source ? source.base : source.label, {
+            error: err,
+            reachability: reachability.errors
+          });
         }
       }
       if (!loaded) {
-        const lastErr = failures.at(-1)?.error;
+        const lastFailure = failures.at(-1);
+        const reachabilityMsg = lastFailure?.reachability?.join(" | ") || "";
+        const lastErr = lastFailure?.error;
         const msg =
           lastErr instanceof Error
-            ? lastErr.message
-            : "Unable to load FFmpeg core. Check network or local assets.";
+            ? `FFmpeg load failed: ${lastErr.message}${reachabilityMsg ? ` [Reachability: ${reachabilityMsg}]` : ""}`
+            : `Unable to load FFmpeg core. Check network or local assets.${reachabilityMsg ? ` [Reachability: ${reachabilityMsg}]` : ""}`;
         // eslint-disable-next-line no-console
         console.error("FFmpeg load failures:", failures);
         setLastError(msg);
