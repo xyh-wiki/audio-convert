@@ -20,10 +20,8 @@
   - 使用绝对 URL 确保跨域加载成功
   - 改进 fallback 机制（本地 -> unpkg -> jsdelivr）
 
-### 4. Docker 部署配置
-- ✅ 创建 `Dockerfile` - 多阶段构建确保资源完整
-- ✅ 创建 `.dockerignore` - 优化构建大小
-- ✅ 创建 `.dokploy/docker-compose.yml` - Dokploy 配置
+### 4. Nixpacks 部署配置
+- ✅ 添加 `nixpacks.toml` - 指示 Nixpacks 如何安装、构建和启动应用
 
 ### 5. 文档
 - ✅ 更新 `DEPLOYMENT.md` - 完整的部署指南和故障排除
@@ -58,7 +56,7 @@ npm run start:serve
 ### Dokploy 配置
 - [ ] 仓库已连接到 Dokploy
 - [ ] 选择正确的分支（main）
-- [ ] 部署环境：Docker
+- [ ] 构建器设置为：Nixpacks（或在 `dokploy.json` 中设置 `"builder": "nixpacks"`）
 - [ ] 构建命令：`npm run build`（已包含 FFmpeg 复制）
 - [ ] 启动命令：`node scripts/serve-with-headers.js`
 - [ ] 环境变量：`NODE_ENV=production`, `PORT=3000`
@@ -100,7 +98,7 @@ Content-Type: application/wasm (for .wasm files)
 **A**: 检查以下几点：
 1. Dokploy 日志中是否有错误
 2. 运行 `npm run build` 是否成功执行 `copy-ffmpeg-assets.js`
-3. Docker 镜像中 `/app/dist/ffmpeg/esm/` 目录是否存在
+3. 在构建产物中是否包含 `dist/ffmpeg/esm/` 目录（本地或通过 Dokploy 日志验证）
 
 ### Q: 无法下载文件
 **A**: 检查浏览器是否支持 `Blob` 和 `URL.createObjectURL()`（所有现代浏览器都支持）

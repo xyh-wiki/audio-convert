@@ -20,6 +20,9 @@ FFmpeg: Unable to load FFmpeg core. Check network or local /ffmpeg assets.
 - **构建后脚本**：`scripts/copy-ffmpeg-assets.js` 确保 FFmpeg 文件被复制到 `dist/ffmpeg/`
 - **Dockerfile**：多阶段构建，确保 FFmpeg 资源包含在最终镜像中
 - **构建命令更新**：`package.json` 中的 build 脚本现在包含资源复制步骤
+ - **构建后脚本**：`scripts/copy-ffmpeg-assets.js` 确保 FFmpeg 文件被复制到 `dist/ffmpeg/`
+ - **Nixpacks 配置**：已添加 `nixpacks.toml`，用于在 Dokploy 等环境中使用 Nixpacks 构建
+ - **构建命令更新**：`package.json` 中的 build 脚本现在包含资源复制步骤
 
 #### 2. 改进资源加载路径
 在 `src/hooks/useFfmpeg.ts` 中实现了：
@@ -51,14 +54,14 @@ npm run start:serve
 ### Dokploy 部署
 1. **提交更改**到 Git 仓库
 2. **在 Dokploy 中配置**：
-   - 使用 Docker 部署方式
+   - 使用 Nixpacks 构建（在 `dokploy.json` 中设置 `"builder": "nixpacks"` 或在控制台选择 Nixpacks）
    - 环境变量：`NODE_ENV=production`
    - 构建命令：`npm run build`（已包含资源复制）
    - 启动命令：`node scripts/serve-with-headers.js`
 
 ### 部署检查清单
-- [ ] Dockerfile 已存在于项目根目录
-- [ ] `.dockerignore` 已配置
+ - [ ] `nixpacks.toml` 已存在于项目根目录（用于 Nixpacks 构建）
+ - [ ] `package.json` build 脚本包含 `copy-ffmpeg-assets.js`
 - [ ] `package.json` build 脚本包含 `copy-ffmpeg-assets.js`
 - [ ] FFmpeg 文件存在于 `public/ffmpeg/` 或 `src/assets/ffmpeg/`
 - [ ] 所有代码变更已提交到 Git
@@ -85,10 +88,13 @@ npm run start:serve
 ### 问题：FFmpeg 仍然无法加载
 **解决方案**：
 1. 检查 Dokploy 日志中是否有构建错误
-2. 验证 Docker 镜像中 `/app/dist/ffmpeg/` 目录确实存在：
-   ```bash
-   docker exec <container_id> ls -la /app/dist/ffmpeg/esm/
-   ```
+2. 如果需要在运行环境检查构建产物（没有容器访问权限时，请使用 Dokploy 控制台日志）：
+   - 在本地运行：
+     ```bash
+     npm run build
+     ls -la dist/ffmpeg/esm/
+     ```
+   - 在 Dokploy 上，检查构建日志和运行时日志，确认 `dist/ffmpeg/esm/` 已被复制并且服务器启动无误。
 3. 检查 HTTP 响应头是否包含正确的 COOP/COEP 标头
 
 ### 问题：WASM 文件返回 404

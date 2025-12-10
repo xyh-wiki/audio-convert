@@ -69,17 +69,10 @@ FFmpeg: Unable to load FFmpeg core. Check network or local /ffmpeg assets.
 - **`optimizeDeps`**：确保 @ffmpeg/ffmpeg 和 @ffmpeg/core 被正确预优化
 - **构建输出配置**：优化 rollup 输出
 
-### 5. Docker 部署配置
+### 5. Nixpacks 部署配置
 
-#### 新增文件：`Dockerfile`
-- **多阶段构建**：
-  - 第一阶段：编译和构建应用
-  - 第二阶段：最小化的生产镜像
-- **文件复制**：确保 FFmpeg 资源被包含在镜像中
-- **Health Check**：监测服务是否正常运行
-
-#### 新增文件：`.dockerignore`
-- 排除不必要的文件，优化镜像大小
+#### 新增文件：`nixpacks.toml`
+- 指示 Nixpacks 如何安装、构建和启动应用（替代 Dockerfile）
 
 ### 6. Dokploy 配置
 
@@ -130,12 +123,12 @@ npm run start:serve
 ### Dokploy 部署
 1. 提交所有更改到 Git
 2. 在 Dokploy 中配置：
-   - 仓库：audio-convert
-   - 分支：main
-   - 部署方式：Docker
-   - 构建命令：`npm run build`
-   - 启动命令：`node scripts/serve-with-headers.js`
-   - 环境变量：`NODE_ENV=production`, `PORT=3000`
+  - 仓库：audio-convert
+  - 分支：main
+  - 构建器：Nixpacks（或在 `dokploy.json` 中设置 `"builder": "nixpacks"`）
+  - 构建命令：`npm run build`
+  - 启动命令：`node scripts/serve-with-headers.js`
+  - 环境变量：`NODE_ENV=production`, `PORT=3000`
 3. 触发部署
 4. 等待部署完成，验证功能正常
 
@@ -167,10 +160,8 @@ npm run start:serve
 | `src/hooks/useFfmpeg.ts` | 修改 | 改进 URL 加载逻辑 |
 | `scripts/serve-with-headers.js` | 修改 | 改用 Express，添加 HTTP 头 |
 | `scripts/copy-ffmpeg-assets.js` | 新增 | 构建后脚本，复制 FFmpeg 资源 |
-| `Dockerfile` | 新增 | Docker 构建配置 |
-| `.dockerignore` | 新增 | Docker 构建优化 |
-| `dokploy.json` | 新增 | Dokploy 配置 |
-| `.dokploy/docker-compose.yml` | 新增 | Docker Compose 配置 |
+| `nixpacks.toml` | 新增 | Nixpacks 构建配置 |
+| `dokploy.json` | 新增 | Dokploy 配置（已配置为使用 Nixpacks） |
 | `DEPLOYMENT.md` | 新增 | 详细部署指南 |
 | `DEPLOYMENT_CHECKLIST.md` | 新增 | 部署检查清单 |
 
@@ -179,8 +170,8 @@ npm run start:serve
 ### 问题：转换仍然报错
 **检查步骤**：
 1. 查看 Dokploy 日志是否有构建错误
-2. SSH 进入容器：`docker exec -it <container_id> /bin/sh`
-3. 验证文件存在：`ls -la /app/dist/ffmpeg/esm/`
+2. 在 Dokploy 控制台或容器 shell（如可用）中检查构建产物和运行日志
+3. 验证构建产物：`ls -la dist/ffmpeg/esm/`（或检查 Dokploy 日志以确认 `copy-ffmpeg-assets.js` 已执行）
 4. 查看浏览器开发工具的 Network 和 Console
 
 ### 问题：WASM 文件返回 404
@@ -191,7 +182,7 @@ npm run start:serve
 **解决方案**：
 1. 确保 `public/ffmpeg/` 目录包含源文件
 2. 手动运行 `npm run build` 测试
-3. 验证 Dockerfile 中的 COPY 命令是否正确
+3. 验证 `scripts/copy-ffmpeg-assets.js` 或构建步骤中是否正确复制了 FFmpeg 资源
 
 ### 问题：SharedArrayBuffer 相关错误
 **原因**：缺少 COOP/COEP 头
@@ -205,4 +196,4 @@ npm run start:serve
 - [FFmpeg.wasm 文档](https://ffmpegwasm.netlify.app/)
 - [COOP/COEP 解释](https://web.dev/coop-coep/)
 - [Dokploy 文档](https://dokploy.com/)
-- [Docker 最佳实践](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
+-- [Nixpacks 文档](https://nixpacks.com/)

@@ -59,21 +59,13 @@ FFmpeg: Unable to load FFmpeg core. Check network or local /ffmpeg assets.
 - 添加 `optimizeDeps` 预优化配置
 - 改进 rollup 输出配置
 
-### 5️⃣ Docker 部署完整配置
+### 5️⃣ Nixpacks 部署配置
 
-**新增文件**：`Dockerfile`
-- 多阶段构建（编译 + 生产）
-- 确保 FFmpeg 资源包含在镜像中
-- Health Check 监测
-
-**新增文件**：`.dockerignore`
-- 优化构建大小
+**新增文件**：`nixpacks.toml`
+- 指示 Nixpacks 如何安装依赖、构建并启动应用（在 Dokploy 中选择 Nixpacks 构建器）
 
 **新增文件**：`dokploy.json`
-- Dokploy 友好的配置
-
-**新增文件**：`.dokploy/docker-compose.yml`
-- Docker Compose 部署配置
+- Dokploy 友好的配置，已配置使用 Nixpacks
 
 ### 6️⃣ 完整部署文档
 
@@ -181,10 +173,13 @@ git push origin main
    - 检查是否有构建错误
    - 确认 `copy-ffmpeg-assets.js` 是否执行
 
-2. **进入容器检查**
-   ```bash
-   docker exec -it <container_id> ls -la /app/dist/ffmpeg/esm/
-   ```
+2. **检查构建产物**
+   - 本地验证：
+     ```bash
+     npm run build
+     ls -la dist/ffmpeg/esm/
+     ```
+   - 在 Dokploy 中查看构建日志和运行时日志，确认 `dist/ffmpeg/esm/` 已被复制并且服务器已成功启动。
 
 3. **浏览器 DevTools**
    - F12 → Network 标签检查文件状态和响应头

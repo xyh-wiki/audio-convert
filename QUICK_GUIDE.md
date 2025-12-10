@@ -33,12 +33,10 @@ git push
 - `scripts/serve-with-headers.js` - 添加必要的 HTTP 头和 MIME 类型
 - `vite.config.ts` - 优化 Vite 构建配置
 
-### 新增文件
+-### 新增文件
 - `scripts/copy-ffmpeg-assets.js` - 构建后脚本，复制 FFmpeg 资源
-- `Dockerfile` - Docker 多阶段构建配置
-- `.dockerignore` - Docker 构建优化
+- `nixpacks.toml` - Nixpacks 构建配置
 - `dokploy.json` - Dokploy 配置
-- `.dokploy/docker-compose.yml` - Docker Compose 配置
 - `DEPLOYMENT.md` - 详细部署指南
 - `DEPLOYMENT_CHECKLIST.md` - 部署检查清单
 - `FIX_SUMMARY.md` - 修复总结
@@ -75,7 +73,7 @@ git push
 | WASM 返回 404 | 确保 `npm run build` 成功执行了 `copy-ffmpeg-assets.js` |
 | 转换仍报错 | 检查浏览器 DevTools Network 标签中的 HTTP 头 |
 | 缓存问题 | 清除浏览器缓存或使用隐私窗口重新测试 |
-| Docker 构建失败 | 查看 Dokploy 日志，确保 Node.js 版本兼容 |
+| 构建失败 | 查看 Dokploy 日志，确保 Node.js 版本兼容 |
 
 ## 📞 需要帮助？
 
