@@ -17,12 +17,12 @@ const getAbsoluteUrl = (path: string): string => {
     return path;
   }
   
-  // 获取当前协议和主机
-  if (typeof window === "undefined") {
+  // 获取当前协议和主机（使用 globalThis 以兼容 Node 构建环境）
+  if (typeof globalThis === "undefined") {
     return path;
   }
   
-  const location = window.location;
+  const location = (globalThis as any).location as Location | undefined;
   if (!location || !location.origin) {
     return path;
   }
@@ -42,11 +42,11 @@ const getAbsoluteUrl = (path: string): string => {
 const makeBase = (subdir: "esm" | "umd") => {
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
   
-  if (typeof window === "undefined") {
+  if (typeof globalThis === "undefined") {
     return `/ffmpeg/${subdir}/`;
   }
   
-  const location = window.location;
+  const location = (globalThis as any).location as Location | undefined;
   if (!location || !location.origin) {
     return `/ffmpeg/${subdir}/`;
   }
