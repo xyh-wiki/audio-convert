@@ -4,10 +4,19 @@ import { AdvancedOptions, ConversionTask, OutputFormat } from "../types";
 
 type ProgressHandler = (value: number) => void;
 
-const CORE_BASES = [
-  "/ffmpeg/umd",
-  "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd",
-  "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd"
+type CoreSource = { base: string; label: string };
+
+const localCoreBase = (() => {
+  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const root = origin ? new URL(base, origin) : new URL(base, "http://localhost");
+  return new URL("ffmpeg/esm/", root).href.replace(/\/$/, "");
+})();
+
+const CORE_SOURCES: CoreSource[] = [
+  { base: localCoreBase, label: "local public" },
+  { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg CDN" },
+  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr CDN" }
 ];
 
 const mimeByFormat: Record<OutputFormat, string> = {
@@ -95,9 +104,12 @@ export const useFfmpeg = () => {
     try {
       let loaded = false;
       let lastErr: unknown;
-      for (const base of CORE_BASES) {
+      for (const source of CORE_SOURCES) {
         try {
           const ffmpeg = new FFmpeg();
+          const coreURL = `${source.base}/ffmpeg-core.js`;
+          const wasmURL = `${source.base}/ffmpeg-core.wasm`;
+          const workerURL = `${source.base}/ffmpeg-core.worker.js`;
           ffmpeg.on("log", ({ message }) => {
             if (import.meta.env.DEV) {
               // eslint-disable-next-line no-console
@@ -105,25 +117,26 @@ export const useFfmpeg = () => {
             }
           });
           await ffmpeg.load({
-            coreURL: `${base}/ffmpeg-core.js`,
-            wasmURL: `${base}/ffmpeg-core.wasm`
+            coreURL,
+            wasmURL,
+            workerURL
           });
           ffmpegRef.current = ffmpeg;
           loaded = true;
           break;
         } catch (err) {
-          lastErr = err;
-          if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
-            console.error("FFmpeg load failed from", base, err);
+            lastErr = err;
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+            console.error("FFmpeg load failed from", source.base, err);
+            }
           }
         }
-      }
       if (!loaded) {
         const msg =
           lastErr instanceof Error
             ? lastErr.message
-            : "Unable to load FFmpeg core. Check network or local /ffmpeg assets.";
+            : "Unable to load FFmpeg core. Check network or local assets.";
         setLastError(msg);
         throw new Error(msg);
       }

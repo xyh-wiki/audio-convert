@@ -1,7 +1,12 @@
 export const MIME_TYPE_JAVASCRIPT = "text/javascript";
 export const MIME_TYPE_WASM = "application/wasm";
 export const CORE_VERSION = "0.12.9";
-export const CORE_URL = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd/ffmpeg-core.js`;
+const coreBase = (() => {
+    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
+    const origin = typeof self !== "undefined" && self.location?.origin ? self.location.origin : "http://localhost";
+    return new URL("ffmpeg/esm/", new URL(base, origin)).href;
+})();
+export const CORE_URL = `${coreBase}ffmpeg-core.js`;
 export var FFMessageType;
 (function (FFMessageType) {
     FFMessageType["LOAD"] = "LOAD";
