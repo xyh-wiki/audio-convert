@@ -33,7 +33,10 @@ pnpm preview   # serve built assets locally
 - For very large (1-2 GB+) videos, ensure sufficient free RAM and avoid heavy multitasking.
 
 ## Deployment
-`pnpm build` outputs a static `dist/` directory suitable for any static host or CDN (Netlify, Vercel static, Cloudflare Pages, S3, etc.).
+`pnpm build` outputs a static `dist/` directory suitable for any static host or CDN (Netlify, Vercel static, Cloudflare Pages, S3, etc.). FFmpeg.wasm bundles are fetched on-demand from public CDNs, so no custom server or headers are required.
+
+### Custom FFmpeg core location
+If you need to host your own FFmpeg core files, set `VITE_FFMPEG_BASE_URL` before running `pnpm build`. The app will try that base URL first, then fall back to unpkg/jsDelivr.
 
 ## Accessibility & SEO
 - Semantic sections (header/main/footer), keyboard-friendly controls, high-contrast buttons.

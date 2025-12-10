@@ -1,9 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { FFmpeg } from "../vendor/ffmpeg/classes.js";
 import { AdvancedOptions, ConversionTask, OutputFormat } from "../types";
-import coreJsAsset from "../assets/ffmpeg/esm/ffmpeg-core.js?url";
-import coreWasmAsset from "../assets/ffmpeg/esm/ffmpeg-core.wasm?url";
-import coreWorkerAsset from "../assets/ffmpeg/esm/ffmpeg-core.worker.js?url";
 
 type ProgressHandler = (value: number) => void;
 
@@ -11,65 +8,22 @@ type CoreSource =
   | { base: string; label: string }
   | { coreURL: string; wasmURL: string; workerURL: string; label: string };
 
-const getAbsoluteUrl = (path: string): string => {
-  // 如果已经是绝对 URL，直接返回
-  if (path.startsWith("http://") || path.startsWith("https://")) {
-    return path;
-  }
-  
-  // 获取当前协议和主机（使用 globalThis 以兼容 Node 构建环境）
-  if (typeof globalThis === "undefined") {
-    return path;
-  }
-  
-  const location = (globalThis as any).location;
-  if (!location || !location.origin) {
-    return path;
-  }
-  
-  const origin = location.origin;
-  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
-  
-  // 处理相对路径
-  if (path.startsWith("/")) {
-    return origin + path;
-  }
-  
-  // 处理相对于 BASE_URL 的路径
-  return origin + base + path;
-};
-
-const makeBase = (subdir: "esm" | "umd") => {
-  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
-  
-  if (typeof globalThis === "undefined") {
-    return `/ffmpeg/${subdir}/`;
-  }
-  
-  const location = (globalThis as any).location;
-  if (!location || !location.origin) {
-    return `/ffmpeg/${subdir}/`;
-  }
-  
-  const origin = location.origin;
-  const root = new URL(base, origin);
-  return new URL(`ffmpeg/${subdir}/`, root).href.replace(/\/$/, "");
-};
+const CORE_VERSION = "0.12.10";
 
 const buildCoreSources = (): CoreSource[] => {
-  const localEsmBase = makeBase("esm");
-  
-  return [
-    { 
-      coreURL: getAbsoluteUrl(coreJsAsset), 
-      wasmURL: getAbsoluteUrl(coreWasmAsset), 
-      workerURL: getAbsoluteUrl(coreWorkerAsset), 
-      label: "bundled esm assets" 
-    },
-    { base: localEsmBase, label: "local esm" },
-    { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg esm" },
-    { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr esm" }
-  ];
+  const sources: CoreSource[] = [];
+  const customBase = import.meta.env.VITE_FFMPEG_BASE_URL?.trim();
+  if (customBase) {
+    sources.push({
+      base: customBase.replace(/\/$/, ""),
+      label: "custom ffmpeg base"
+    });
+  }
+  sources.push(
+    { base: `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/esm`, label: "unpkg esm" },
+    { base: `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/esm`, label: "jsdelivr esm" }
+  );
+  return sources;
 };
 
 const checkAssetReachability = async (
