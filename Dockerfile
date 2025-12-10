@@ -25,7 +25,13 @@ WORKDIR /app
 
 # Install serve-handler dependencies only
 COPY package*.json ./
-RUN npm ci --only=production && npm install serve-handler express
+# Use `npm ci` when a lockfile exists, otherwise fall back to `npm install`.
+# This avoids failing builds when `package-lock.json` is not present in the repo.
+RUN if [ -f package-lock.json ]; then \
+      npm ci --only=production; \
+    else \
+      npm install --omit=dev; \
+    fi && npm install serve-handler express --no-audit --no-fund
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
