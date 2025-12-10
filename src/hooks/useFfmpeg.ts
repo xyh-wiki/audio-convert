@@ -1,10 +1,15 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { FFmpeg } from "../vendor/ffmpeg/classes.js";
 import { AdvancedOptions, ConversionTask, OutputFormat } from "../types";
+import coreJsAsset from "../assets/ffmpeg/umd/ffmpeg-core.js?url";
+import coreWasmAsset from "../assets/ffmpeg/umd/ffmpeg-core.wasm?url";
+import coreWorkerAsset from "../assets/ffmpeg/umd/ffmpeg-core.worker.js?url";
 
 type ProgressHandler = (value: number) => void;
 
-type CoreSource = { base: string; label: string };
+type CoreSource =
+  | { base: string; label: string }
+  | { coreURL: string; wasmURL: string; workerURL: string; label: string };
 
 const makeBase = (subdir: "esm" | "umd") => {
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
@@ -22,6 +27,7 @@ const localEsmBase = makeBase("esm");
 const localUmdBase = makeBase("umd");
 
 const CORE_SOURCES: CoreSource[] = [
+  { coreURL: coreJsAsset, wasmURL: coreWasmAsset, workerURL: coreWorkerAsset, label: "bundled assets" },
   { base: localEsmBase, label: "local esm" },
   { base: localUmdBase, label: "local umd" },
   { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg esm" },
@@ -118,9 +124,10 @@ export const useFfmpeg = () => {
       for (const source of CORE_SOURCES) {
         try {
           const ffmpeg = new FFmpeg();
-          const coreURL = `${source.base}/ffmpeg-core.js`;
-          const wasmURL = `${source.base}/ffmpeg-core.wasm`;
-          const workerURL = `${source.base}/ffmpeg-core.worker.js`;
+          const coreURL = "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL;
+          const wasmURL = "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL;
+          const workerURL =
+            "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL;
           ffmpeg.on("log", ({ message }) => {
             if (import.meta.env.DEV) {
               // eslint-disable-next-line no-console
@@ -139,7 +146,7 @@ export const useFfmpeg = () => {
             lastErr = err;
             if (import.meta.env.DEV) {
               // eslint-disable-next-line no-console
-            console.error("FFmpeg load failed from", source.base, err);
+            console.error("FFmpeg load failed from", "base" in source ? source.base : source.label, err);
             }
           }
         }
