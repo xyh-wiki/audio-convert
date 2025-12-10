@@ -3,7 +3,9 @@ export const MIME_TYPE_WASM = "application/wasm";
 export const CORE_VERSION = "0.12.9";
 const coreBase = (() => {
     const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
-    const origin = typeof self !== "undefined" && self.location?.origin ? self.location.origin : "http://localhost";
+    const origin = typeof globalThis !== "undefined" && globalThis.location?.origin
+        ? globalThis.location.origin
+        : "http://localhost";
     return new URL("ffmpeg/esm/", new URL(base, origin)).href;
 })();
 export const CORE_URL = `${coreBase}ffmpeg-core.js`;

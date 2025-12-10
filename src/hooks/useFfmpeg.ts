@@ -8,7 +8,12 @@ type CoreSource = { base: string; label: string };
 
 const localCoreBase = (() => {
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin =
+    typeof globalThis !== "undefined" &&
+    "location" in globalThis &&
+    typeof (globalThis as any).location?.origin === "string"
+      ? (globalThis as any).location.origin
+      : "";
   const root = origin ? new URL(base, origin) : new URL(base, "http://localhost");
   return new URL("ffmpeg/esm/", root).href.replace(/\/$/, "");
 })();
