@@ -141,9 +141,9 @@ export const useFfmpeg = () => {
         } catch (err) {
           failures.push({
             label: "base" in source ? source.base : source.label,
-            coreURL,
-            wasmURL,
-            workerURL,
+            coreURL: "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL,
+            wasmURL: "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL,
+            workerURL: "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL,
             error: err
           });
           // eslint-disable-next-line no-console
