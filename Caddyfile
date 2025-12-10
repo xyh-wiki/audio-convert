@@ -1,0 +1,55 @@
+:3000 {
+  # Enable gzip compression
+  encode gzip
+
+  # Root directory for static files
+  root * /app/dist
+
+  # Set COOP/COEP headers for FFmpeg SharedArrayBuffer
+  header {
+    Cross-Origin-Opener-Policy same-origin
+    Cross-Origin-Embedder-Policy require-corp
+    
+    # Ensure .wasm files have correct MIME type
+    -Content-Type
+  }
+
+  @wasm {
+    path *.wasm
+  }
+  
+  header @wasm Content-Type application/wasm
+
+  @worker {
+    path *.worker.js
+  }
+  
+  header @worker Content-Type application/javascript
+
+  # Cache control for versioned assets
+  @versioned {
+    path /assets/*
+  }
+  
+  header @versioned Cache-Control "public, max-age=31536000, immutable"
+
+  # No cache for HTML
+  @html {
+    path *.html
+  }
+  
+  header @html Cache-Control "no-cache, no-store, must-revalidate"
+
+  # Long cache for ffmpeg assets
+  @ffmpeg {
+    path /ffmpeg/*
+  }
+  
+  header @ffmpeg Cache-Control "public, max-age=31536000, immutable"
+
+  # Serve files
+  file_server
+
+  # SPA fallback: route all non-file requests to index.html
+  try_files {path} /index.html
+}

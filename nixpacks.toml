@@ -16,7 +16,8 @@ commands = [
 ]
 
 [phases.start]
-command = "node scripts/serve-with-headers.js"
+# Use Caddy to serve dist with proper headers for FFmpeg
+command = "caddy run --config /app/Caddyfile"
 
 [expose]
 port = 3000
