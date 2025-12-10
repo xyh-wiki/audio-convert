@@ -82,7 +82,7 @@ Content-Type: application/wasm (for .wasm files)
 
 ### 2. 浏览器控制台检查（F12 Console）
 - [ ] 没有 CORS 错误
-- [ ] 没有 "Unable to load FFmpeg core" 错误
+- [ ] FFmpeg 加载正常
 - [ ] 应该看到 FFmpeg 加载成功的日志
 
 ### 3. 功能测试

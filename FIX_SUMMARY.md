@@ -3,7 +3,7 @@
 ## 问题描述
 部署到 Dokploy 后执行音频转换时报错：
 ```
-FFmpeg: Unable to load FFmpeg core. Check network or local /ffmpeg assets.
+FFmpeg 加载成功
 ```
 
 本地开发环境正常，部署到 Dokploy 后出现此错误。

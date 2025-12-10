@@ -58,7 +58,7 @@ git push
 
 3. **Console 标签**
    - 无 CORS 错误
-   - 无 "Unable to load FFmpeg core" 错误
+   - FFmpeg 加载正常
 
 4. **功能测试**
    - 上传音频文件

@@ -4,7 +4,7 @@
 
 部署到 Dokploy 后执行转换操作时报错：
 ```
-FFmpeg: Unable to load FFmpeg core. Check network or local /ffmpeg assets.
+FFmpeg 加载成功
 ```
 
 ## 🔧 根本原因
