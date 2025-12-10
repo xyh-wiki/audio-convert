@@ -15,7 +15,13 @@ COPY public ./public
 COPY scripts ./scripts
 
 # Install dependencies and build
-RUN npm ci
+# Use `npm ci` if a lockfile exists for reproducible installs; otherwise
+# fall back to `npm install` (builder needs devDependencies for the build).
+RUN if [ -f package-lock.json ]; then \
+      npm ci; \
+    else \
+      npm install; \
+    fi
 RUN npm run build
 
 # Production stage
