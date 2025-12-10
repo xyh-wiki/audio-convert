@@ -22,7 +22,7 @@ const getAbsoluteUrl = (path: string): string => {
     return path;
   }
   
-  const location = (globalThis as any).location as Location | undefined;
+  const location = (globalThis as any).location;
   if (!location || !location.origin) {
     return path;
   }
@@ -46,7 +46,7 @@ const makeBase = (subdir: "esm" | "umd") => {
     return `/ffmpeg/${subdir}/`;
   }
   
-  const location = (globalThis as any).location as Location | undefined;
+  const location = (globalThis as any).location;
   if (!location || !location.origin) {
     return `/ffmpeg/${subdir}/`;
   }
