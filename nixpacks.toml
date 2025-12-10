@@ -1,0 +1,22 @@
+# Nixpacks configuration for audio-convert
+# This file instructs Nixpacks how to build and run the application.
+
+[env]
+NODE_ENV = "production"
+
+[phases.setup]
+# Ensure a modern node version is available (Nix package name for nodejs)
+packages = ["nodejs-20_x"]
+
+[phases.build]
+commands = [
+  "npm ci || npm install",
+  "npm run build",
+  "node scripts/copy-ffmpeg-assets.js || true"
+]
+
+[phases.start]
+command = "node scripts/serve-with-headers.js"
+
+[expose]
+port = 3000

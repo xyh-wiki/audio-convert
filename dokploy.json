@@ -9,7 +9,7 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "dockerfile": "Dockerfile",
+  "builder": "nixpacks",
   "healthCheck": {
     "enabled": true,
     "interval": 30,
