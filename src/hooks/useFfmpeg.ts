@@ -79,6 +79,9 @@ const checkAssetReachability = async (
 ): Promise<{ ok: boolean; errors: string[] }> => {
   const errors: string[] = [];
   
+  // eslint-disable-next-line no-console
+  console.log("[useFfmpeg] Checking asset reachability:", { coreURL, wasmURL, workerURL });
+  
   for (const [name, url] of [
     ["core", coreURL],
     ["wasm", wasmURL],
@@ -86,11 +89,15 @@ const checkAssetReachability = async (
   ] as const) {
     try {
       const res = await fetch(url, { method: "HEAD", mode: "cors" });
+      // eslint-disable-next-line no-console
+      console.log(`[useFfmpeg] ${name} reachability: ${res.status} ${res.statusText}`);
       if (!res.ok) {
         errors.push(`${name}: HTTP ${res.status} ${res.statusText} (${url})`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      // eslint-disable-next-line no-console
+      console.error(`[useFfmpeg] ${name} reachability error:`, msg);
       errors.push(`${name}: ${msg} (${url})`);
     }
   }
@@ -180,10 +187,15 @@ export const useFfmpeg = () => {
   const load = useCallback(async () => {
     if (isReady || isLoading) return;
     setIsLoading(true);
+    // eslint-disable-next-line no-console
+    console.log("[useFfmpeg] Load initiated");
     try {
       let loaded = false;
       const failures: { label: string; coreURL: string; wasmURL: string; workerURL: string; reachability?: string[]; error: unknown }[] = [];
       const CORE_SOURCES = buildCoreSources();
+      
+      // eslint-disable-next-line no-console
+      console.log("[useFfmpeg] CORE_SOURCES:", CORE_SOURCES);
       
       for (const source of CORE_SOURCES) {
         try {
@@ -192,6 +204,9 @@ export const useFfmpeg = () => {
           const wasmURL = "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL;
           const workerURL =
             "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL;
+          
+          // eslint-disable-next-line no-console
+          console.log(`[useFfmpeg] Attempting load from ${source.label}:`, { coreURL, wasmURL, workerURL });
           
           // Pre-check asset reachability before attempting to load
           const reachability = await checkAssetReachability(coreURL, wasmURL, workerURL);
@@ -204,16 +219,19 @@ export const useFfmpeg = () => {
           }
           
           ffmpeg.on("log", ({ message }) => {
-            if (import.meta.env.DEV) {
-              // eslint-disable-next-line no-console
-              console.debug("[ffmpeg]", message);
-            }
+            // Always log FFmpeg debug messages to help diagnose load issues
+            // eslint-disable-next-line no-console
+            console.debug("[ffmpeg]", message);
           });
+          // eslint-disable-next-line no-console
+          console.log(`[useFfmpeg] Calling ffmpeg.load for ${source.label}`);
           await ffmpeg.load({
             coreURL,
             wasmURL,
             workerURL
           });
+          // eslint-disable-next-line no-console
+          console.log(`[useFfmpeg] Successfully loaded from ${source.label}`);
           ffmpegRef.current = ffmpeg;
           loaded = true;
           break;

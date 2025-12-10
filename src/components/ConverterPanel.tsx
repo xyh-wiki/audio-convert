@@ -50,6 +50,14 @@ export const ConverterPanel: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Debug: log when lastError changes
+  React.useEffect(() => {
+    if (lastError) {
+      // eslint-disable-next-line no-console
+      console.log("[ConverterPanel] lastError:", lastError);
+    }
+  }, [lastError]);
+
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
     Array.from(fileList).forEach((file) => {

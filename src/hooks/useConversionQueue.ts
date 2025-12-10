@@ -91,9 +91,13 @@ export const useConversionQueue = () => {
       setActiveId(next.id);
       updateTask(next.id, { status: "processing", message: "Processing..." });
       try {
+        // eslint-disable-next-line no-console
+        console.log("[useConversionQueue] Starting conversion for", next.id);
         const result = await convert(next, (progress) =>
           updateTask(next.id, { progress, status: "processing", message: "Converting..." })
         );
+        // eslint-disable-next-line no-console
+        console.log("[useConversionQueue] Conversion completed for", next.id);
         updateTask(next.id, {
           progress: 100,
           status: "completed",
@@ -103,6 +107,8 @@ export const useConversionQueue = () => {
           sizeAfter: result.size
         });
       } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("[useConversionQueue] Conversion error for", next.id, error);
         const message =
           error instanceof Error
             ? error.message
