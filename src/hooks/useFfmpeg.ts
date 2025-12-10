@@ -6,7 +6,7 @@ type ProgressHandler = (value: number) => void;
 
 type CoreSource = { base: string; label: string };
 
-const localCoreBase = (() => {
+const makeBase = (subdir: "esm" | "umd") => {
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
   const origin =
     typeof globalThis !== "undefined" &&
@@ -15,13 +15,19 @@ const localCoreBase = (() => {
       ? (globalThis as any).location.origin
       : "";
   const root = origin ? new URL(base, origin) : new URL(base, "http://localhost");
-  return new URL("ffmpeg/esm/", root).href.replace(/\/$/, "");
-})();
+  return new URL(`ffmpeg/${subdir}/`, root).href.replace(/\/$/, "");
+};
+
+const localEsmBase = makeBase("esm");
+const localUmdBase = makeBase("umd");
 
 const CORE_SOURCES: CoreSource[] = [
-  { base: localCoreBase, label: "local public" },
-  { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg CDN" },
-  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr CDN" }
+  { base: localEsmBase, label: "local esm" },
+  { base: localUmdBase, label: "local umd" },
+  { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg esm" },
+  { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd", label: "unpkg umd" },
+  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr esm" },
+  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd", label: "jsdelivr umd" }
 ];
 
 const mimeByFormat: Record<OutputFormat, string> = {
