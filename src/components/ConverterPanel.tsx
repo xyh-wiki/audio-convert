@@ -31,6 +31,9 @@ const inferOutput = (mode: ConversionMode): OutputFormat => {
 };
 
 export const ConverterPanel: React.FC = () => {
+  // eslint-disable-next-line no-console
+  console.log("[ConverterPanel] Component mounted/rendered");
+  
   const {
     tasks,
     addTask,
@@ -500,7 +503,11 @@ export const ConverterPanel: React.FC = () => {
 
           {tasks.length > 0 && (
             <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button className="button primary" onClick={startAll} disabled={isLoading}>
+              <button className="button primary" onClick={() => {
+                // eslint-disable-next-line no-console
+                console.log("[ConverterPanel] Convert all button clicked, tasks:", tasks.length);
+                startAll();
+              }} disabled={isLoading}>
                 Convert all
               </button>
               {isLoading && <div>Loading FFmpeg (first run)...</div>}

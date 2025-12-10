@@ -17,6 +17,9 @@ export const useConversionQueue = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const { convert, cancel, isReady, isLoading, lastError } = useFfmpeg();
 
+  // eslint-disable-next-line no-console
+  console.log("[useConversionQueue] Hook initialized, isReady:", isReady, "isLoading:", isLoading);
+
   const addTask = useCallback(
     ({ file, mode, targetFormat, preset = "balanced", options = {} }: AddTaskArgs) => {
       const basePreset = presets.find((p) => p.id === preset);
@@ -70,6 +73,8 @@ export const useConversionQueue = () => {
   );
 
   const startAll = useCallback(() => {
+    // eslint-disable-next-line no-console
+    console.log("[useConversionQueue] startAll called");
     setTasks((prev) =>
       prev.map((t) =>
         t.status === "completed"
