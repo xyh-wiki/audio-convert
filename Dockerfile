@@ -34,8 +34,9 @@ COPY scripts ./scripts
 # Ensure FFmpeg files are in dist
 RUN mkdir -p dist/ffmpeg/esm dist/ffmpeg/umd
 
-# Copy FFmpeg files if they exist in public
-COPY public/ffmpeg ./dist/ffmpeg 2>/dev/null || true
+# FFmpeg assets are copied during the build by `scripts/copy-ffmpeg-assets.js`
+# (this ensures `dist/ffmpeg` is populated). Avoid conditional shell
+# syntax in COPY which is invalid in Dockerfile.
 
 # Expose port
 EXPOSE 3000
