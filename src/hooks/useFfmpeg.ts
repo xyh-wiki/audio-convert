@@ -274,7 +274,7 @@ export const useFfmpeg = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, isReady]);
+  }, []);
 
   const convert = useCallback(
     async (task: ConversionTask, onProgress?: ProgressHandler) => {
