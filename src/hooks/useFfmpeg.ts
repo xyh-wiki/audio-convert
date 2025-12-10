@@ -11,26 +11,66 @@ type CoreSource =
   | { base: string; label: string }
   | { coreURL: string; wasmURL: string; workerURL: string; label: string };
 
+const getAbsoluteUrl = (path: string): string => {
+  // 如果已经是绝对 URL，直接返回
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  
+  // 获取当前协议和主机
+  if (typeof window === "undefined") {
+    return path;
+  }
+  
+  const location = window.location;
+  if (!location || !location.origin) {
+    return path;
+  }
+  
+  const origin = location.origin;
+  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
+  
+  // 处理相对路径
+  if (path.startsWith("/")) {
+    return origin + path;
+  }
+  
+  // 处理相对于 BASE_URL 的路径
+  return origin + base + path;
+};
+
 const makeBase = (subdir: "esm" | "umd") => {
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
-  const origin =
-    typeof globalThis !== "undefined" &&
-    "location" in globalThis &&
-    typeof (globalThis as any).location?.origin === "string"
-      ? (globalThis as any).location.origin
-      : "";
-  const root = origin ? new URL(base, origin) : new URL(base, "http://localhost");
+  
+  if (typeof window === "undefined") {
+    return `/ffmpeg/${subdir}/`;
+  }
+  
+  const location = window.location;
+  if (!location || !location.origin) {
+    return `/ffmpeg/${subdir}/`;
+  }
+  
+  const origin = location.origin;
+  const root = new URL(base, origin);
   return new URL(`ffmpeg/${subdir}/`, root).href.replace(/\/$/, "");
 };
 
-const localEsmBase = makeBase("esm");
-
-const CORE_SOURCES: CoreSource[] = [
-  { coreURL: coreJsAsset, wasmURL: coreWasmAsset, workerURL: coreWorkerAsset, label: "bundled esm assets" },
-  { base: localEsmBase, label: "local esm" },
-  { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg esm" },
-  { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr esm" }
-];
+const buildCoreSources = (): CoreSource[] => {
+  const localEsmBase = makeBase("esm");
+  
+  return [
+    { 
+      coreURL: getAbsoluteUrl(coreJsAsset), 
+      wasmURL: getAbsoluteUrl(coreWasmAsset), 
+      workerURL: getAbsoluteUrl(coreWorkerAsset), 
+      label: "bundled esm assets" 
+    },
+    { base: localEsmBase, label: "local esm" },
+    { base: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm", label: "unpkg esm" },
+    { base: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm", label: "jsdelivr esm" }
+  ];
+};
 
 const mimeByFormat: Record<OutputFormat, string> = {
   mp3: "audio/mpeg",
@@ -117,6 +157,8 @@ export const useFfmpeg = () => {
     try {
       let loaded = false;
       const failures: { label: string; coreURL: string; wasmURL: string; workerURL: string; error: unknown }[] = [];
+      const CORE_SOURCES = buildCoreSources();
+      
       for (const source of CORE_SOURCES) {
         try {
           const ffmpeg = new FFmpeg();

@@ -9,6 +9,16 @@ export default defineConfig({
     strictPort: false
   },
   build: {
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"]
+        }
+      }
+    }
+  },
+  optimizeDeps: {
+    include: ["@ffmpeg/ffmpeg", "@ffmpeg/core"]
   }
 });

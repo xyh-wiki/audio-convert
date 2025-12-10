@@ -1,4 +1,4 @@
-import { FSNode, FFMessageLoadConfig, OK, IsFirst, LogEventCallback, ProgressEventCallback, FileData, FFFSType, FFFSMountOptions, FFFSPath } from "./types.js";
+import { FSNode, FFMessageLoadConfig, OK, IsFirst, LogEventCallback, ProgressEventCallback, FileData, FFFSType, FFFSMountOptions, FFFSPath } from "./types";
 type FFMessageOptions = {
     signal?: AbortSignal;
 };
