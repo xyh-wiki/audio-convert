@@ -265,7 +265,16 @@ export const useFfmpeg = () => {
             ? `FFmpeg load failed: ${lastErr.message}${reachabilityMsg ? ` [Reachability: ${reachabilityMsg}]` : ""}`
             : `Unable to load FFmpeg core. Check network or local assets.${reachabilityMsg ? ` [Reachability: ${reachabilityMsg}]` : ""}`;
         // eslint-disable-next-line no-console
-        console.error("FFmpeg load failures:", failures);
+        console.error("[useFfmpeg] ALL LOAD ATTEMPTS FAILED. Summary:", {
+          msg,
+          lastFailure,
+          allFailures: failures.map(f => ({
+            label: f.label,
+            coreURL: f.coreURL,
+            reachability: f.reachability,
+            error: f.error instanceof Error ? { name: f.error.name, message: f.error.message, stack: f.error.stack } : String(f.error)
+          }))
+        });
         setLastError(msg);
         throw new Error(msg);
       }

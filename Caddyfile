@@ -5,51 +5,30 @@
   # Root directory for static files
   root * /app/dist
 
-  # Set COOP/COEP headers for FFmpeg SharedArrayBuffer
-  header {
-    Cross-Origin-Opener-Policy same-origin
-    Cross-Origin-Embedder-Policy require-corp
-    
-    # Ensure .wasm files have correct MIME type
-    -Content-Type
-  }
+  # CRITICAL: Set headers for FFmpeg SharedArrayBuffer support
+  header Cross-Origin-Opener-Policy "same-origin"
+  header Cross-Origin-Embedder-Policy "require-corp"
 
-  @wasm {
-    path *.wasm
-  }
-  
-  header @wasm Content-Type application/wasm
+  # MIME types for FFmpeg assets
+  @wasm path *.wasm
+  header @wasm Content-Type "application/wasm"
 
-  @worker {
-    path *.worker.js
-  }
-  
-  header @worker Content-Type application/javascript
+  @worker path *.worker.js
+  header @worker Content-Type "application/javascript"
 
-  # Cache control for versioned assets
-  @versioned {
-    path /assets/*
-  }
-  
+  # Caching strategies
+  @versioned path /assets/*
   header @versioned Cache-Control "public, max-age=31536000, immutable"
 
-  # No cache for HTML
-  @html {
-    path *.html
-  }
-  
+  @html path *.html
   header @html Cache-Control "no-cache, no-store, must-revalidate"
 
-  # Long cache for ffmpeg assets
-  @ffmpeg {
-    path /ffmpeg/*
-  }
-  
+  @ffmpeg path /ffmpeg/*
   header @ffmpeg Cache-Control "public, max-age=31536000, immutable"
 
-  # Serve files
+  # Serve static files
   file_server
 
-  # SPA fallback: route all non-file requests to index.html
+  # SPA fallback
   try_files {path} /index.html
 }
