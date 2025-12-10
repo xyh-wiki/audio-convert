@@ -258,25 +258,18 @@ export const useFfmpeg = () => {
       }
       if (!loaded) {
         const lastFailure = failures.at(-1);
-        const reachabilityMsg = lastFailure?.reachability?.join(" | ") || "";
-        const lastErr = lastFailure?.error;
-        const msg =
-          lastErr instanceof Error
-            ? `FFmpeg load failed: ${lastErr.message}${reachabilityMsg ? ` [Reachability: ${reachabilityMsg}]` : ""}`
-            : `Unable to load FFmpeg core. Check network or local assets.${reachabilityMsg ? ` [Reachability: ${reachabilityMsg}]` : ""}`;
         // eslint-disable-next-line no-console
-        console.error("[useFfmpeg] ALL LOAD ATTEMPTS FAILED. Summary:", {
-          msg,
-          lastFailure,
-          allFailures: failures.map(f => ({
-            label: f.label,
-            coreURL: f.coreURL,
-            reachability: f.reachability,
-            error: f.error instanceof Error ? { name: f.error.name, message: f.error.message, stack: f.error.stack } : String(f.error)
-          }))
-        });
-        setLastError(msg);
-        // Don't throw - just log and let convert() handle it
+        console.error("[useFfmpeg] ALL LOAD ATTEMPTS FAILED. Failures:", failures);
+        if (lastFailure) {
+          // eslint-disable-next-line no-console
+          console.error("[useFfmpeg] Last attempt:", {
+            label: lastFailure.label,
+            coreURL: lastFailure.coreURL,
+            reachability: lastFailure.reachability,
+            error: lastFailure.error instanceof Error ? lastFailure.error.message : String(lastFailure.error)
+          });
+        }
+        // Mark as error but don't set lastError - let convert() try CDN fallbacks
         return;
       }
       setIsReady(true);
