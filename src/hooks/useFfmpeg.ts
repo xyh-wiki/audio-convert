@@ -116,7 +116,7 @@ export const useFfmpeg = () => {
     setIsLoading(true);
     try {
       let loaded = false;
-      let lastErr: unknown;
+      const failures: { label: string; coreURL: string; wasmURL: string; workerURL: string; error: unknown }[] = [];
       for (const source of CORE_SOURCES) {
         try {
           const ffmpeg = new FFmpeg();
@@ -139,18 +139,25 @@ export const useFfmpeg = () => {
           loaded = true;
           break;
         } catch (err) {
-            lastErr = err;
-            if (import.meta.env.DEV) {
-              // eslint-disable-next-line no-console
-            console.error("FFmpeg load failed from", "base" in source ? source.base : source.label, err);
-            }
-          }
+          failures.push({
+            label: "base" in source ? source.base : source.label,
+            coreURL,
+            wasmURL,
+            workerURL,
+            error: err
+          });
+          // eslint-disable-next-line no-console
+          console.error("FFmpeg load failed from", "base" in source ? source.base : source.label, err);
         }
+      }
       if (!loaded) {
+        const lastErr = failures.at(-1)?.error;
         const msg =
           lastErr instanceof Error
             ? lastErr.message
             : "Unable to load FFmpeg core. Check network or local assets.";
+        // eslint-disable-next-line no-console
+        console.error("FFmpeg load failures:", failures);
         setLastError(msg);
         throw new Error(msg);
       }
