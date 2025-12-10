@@ -276,7 +276,8 @@ export const useFfmpeg = () => {
           }))
         });
         setLastError(msg);
-        throw new Error(msg);
+        // Don't throw - just log and let convert() handle it
+        return;
       }
       setIsReady(true);
       setLastError(null);
@@ -288,10 +289,17 @@ export const useFfmpeg = () => {
   const convert = useCallback(
     async (task: ConversionTask, onProgress?: ProgressHandler) => {
       if (!ffmpegRef.current) {
+        // eslint-disable-next-line no-console
+        console.log("[useFfmpeg] FFmpeg not initialized, attempting load...");
         await load();
       }
       const ffmpeg = ffmpegRef.current;
-      if (!ffmpeg) throw new Error("FFmpeg not initialized");
+      if (!ffmpeg) {
+        const errMsg = "FFmpeg not initialized after load attempt";
+        // eslint-disable-next-line no-console
+        console.error("[useFfmpeg]", errMsg, { isReady, isLoading, lastError });
+        throw new Error(errMsg);
+      }
 
       ffmpeg.off?.("progress", () => undefined);
       ffmpeg.on("progress", ({ progress }: { progress: number }) => {
