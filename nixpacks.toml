@@ -4,7 +4,7 @@
 [env]
 NODE_ENV = "production"
 
-[phases.setup]
+[setup]
 # Ensure a modern node version is available (Nix package name for nodejs)
 packages = ["nodejs-20_x"]
 
