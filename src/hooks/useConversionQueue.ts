@@ -43,7 +43,14 @@ export const useConversionQueue = () => {
         message: "Waiting",
         sizeBefore: file.size
       };
-      setTasks((prev) => [...prev, task]);
+      setTasks((prev) => {
+        if (prev.length >= 1) {
+          // eslint-disable-next-line no-console
+          console.warn("[useConversionQueue] Only one task allowed at a time.");
+          return prev;
+        }
+        return [...prev, task];
+      });
     },
     []
   );

@@ -63,10 +63,22 @@ export const ConverterPanel: React.FC = () => {
 
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
-    Array.from(fileList).forEach((file) => {
-      const mode = getDefaultMode(file);
-      addTask({ file, mode, targetFormat: inferOutput(mode) });
-    });
+    if (tasks.length >= 1) {
+      // eslint-disable-next-line no-console
+      console.warn("[ConverterPanel] Only one file can be converted at a time.");
+      return;
+    }
+    const file = Array.from(fileList)[0];
+    if (!file) return;
+    const mode = getDefaultMode(file);
+    addTask({ file, mode, targetFormat: inferOutput(mode) });
+  };
+
+  const handleDownload = (task: ConversionTask) => {
+    // allow download to start, then reset queue
+    setTimeout(() => {
+      clearQueue();
+    }, 0);
   };
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -406,6 +418,7 @@ export const ConverterPanel: React.FC = () => {
               href={task.outputUrl}
               download={task.outputName}
               aria-label={`Download ${task.outputName}`}
+              onClick={() => handleDownload(task)}
             >
               {t("download")}
             </a>
