@@ -5,11 +5,11 @@ import { AdvancedOptions, ConversionTask, OutputFormat } from "../types";
 type ProgressHandler = (value: number) => void;
 
 type CoreSource =
-  | { base: string; label: string }
-  | { coreURL: string; wasmURL: string; workerURL: string; label: string };
+  | { base: string; label: string; includeWorker?: boolean }
+  | { coreURL: string; wasmURL: string; workerURL?: string; label: string };
 
 const CORE_VERSION = "0.12.10";
-const CORE_PACKAGE = "@ffmpeg/core-mt";
+const CORE_PACKAGE = "@ffmpeg/core";
 
 const buildCoreSources = (): CoreSource[] => {
   const sources: CoreSource[] = [];
@@ -17,12 +17,21 @@ const buildCoreSources = (): CoreSource[] => {
   if (customBase) {
     sources.push({
       base: customBase.replace(/\/$/, ""),
-      label: "custom ffmpeg base"
+      label: "custom ffmpeg base",
+      includeWorker: false
     });
   }
   sources.push(
-    { base: `https://unpkg.com/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`, label: "unpkg esm" },
-    { base: `https://cdn.jsdelivr.net/npm/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`, label: "jsdelivr esm" }
+    {
+      base: `https://unpkg.com/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`,
+      label: "unpkg esm",
+      includeWorker: false
+    },
+    {
+      base: `https://cdn.jsdelivr.net/npm/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`,
+      label: "jsdelivr esm",
+      includeWorker: false
+    }
   );
   return sources;
 };
@@ -37,11 +46,15 @@ const checkAssetReachability = async (
   // eslint-disable-next-line no-console
   console.log("[useFfmpeg] Checking asset reachability:", { coreURL, wasmURL, workerURL });
   
-  for (const [name, url] of [
-    ["core", coreURL],
-    ["wasm", wasmURL],
-    ["worker", workerURL]
-  ] as const) {
+  const targets: { name: string; url: string }[] = [
+    { name: "core", url: coreURL },
+    { name: "wasm", url: wasmURL }
+  ];
+  if (workerURL) {
+    targets.push({ name: "worker", url: workerURL });
+  }
+
+  for (const { name, url } of targets) {
     try {
       const res = await fetch(url, { method: "HEAD", mode: "cors" });
       // eslint-disable-next-line no-console
@@ -146,7 +159,7 @@ export const useFfmpeg = () => {
     console.log("[useFfmpeg] Load initiated");
     try {
       let loaded = false;
-      const failures: { label: string; coreURL: string; wasmURL: string; workerURL: string; reachability?: string[]; error: unknown }[] = [];
+      const failures: { label: string; coreURL: string; wasmURL: string; workerURL?: string; reachability?: string[]; error: unknown }[] = [];
       const CORE_SOURCES = buildCoreSources();
       
       // eslint-disable-next-line no-console
@@ -158,7 +171,11 @@ export const useFfmpeg = () => {
           const coreURL = "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL;
           const wasmURL = "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL;
           const workerURL =
-            "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL;
+            "base" in source
+              ? source.includeWorker === false
+                ? undefined
+                : `${source.base}/ffmpeg-core.worker.js`
+              : source.workerURL;
           
           // eslint-disable-next-line no-console
           console.log(`[useFfmpeg] Attempting load from ${source.label}:`, { coreURL, wasmURL, workerURL });
@@ -180,11 +197,14 @@ export const useFfmpeg = () => {
           });
           // eslint-disable-next-line no-console
           console.log(`[useFfmpeg] Calling ffmpeg.load for ${source.label}`);
-          await ffmpeg.load({
+          const loadOptions: Record<string, string> = {
             coreURL,
-            wasmURL,
-            workerURL
-          });
+            wasmURL
+          };
+          if (workerURL) {
+            loadOptions.workerURL = workerURL;
+          }
+          await ffmpeg.load(loadOptions);
           // eslint-disable-next-line no-console
           console.log(`[useFfmpeg] Successfully loaded from ${source.label}`);
           ffmpegRef.current = ffmpeg;
@@ -194,13 +214,22 @@ export const useFfmpeg = () => {
           const reachability = await checkAssetReachability(
             "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL,
             "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL,
-            "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL
+            "base" in source && source.includeWorker === false
+              ? undefined
+              : "base" in source
+                ? `${source.base}/ffmpeg-core.worker.js`
+                : source.workerURL
           );
           failures.push({
             label: "base" in source ? source.base : source.label,
             coreURL: "base" in source ? `${source.base}/ffmpeg-core.js` : source.coreURL,
             wasmURL: "base" in source ? `${source.base}/ffmpeg-core.wasm` : source.wasmURL,
-            workerURL: "base" in source ? `${source.base}/ffmpeg-core.worker.js` : source.workerURL,
+            workerURL:
+              "base" in source && source.includeWorker === false
+                ? undefined
+                : "base" in source
+                  ? `${source.base}/ffmpeg-core.worker.js`
+                  : source.workerURL,
             reachability: reachability.errors,
             error: err
           });
