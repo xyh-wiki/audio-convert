@@ -39,7 +39,7 @@ const buildCoreSources = (): CoreSource[] => {
 const checkAssetReachability = async (
   coreURL: string,
   wasmURL: string,
-  workerURL: string
+  workerURL?: string
 ): Promise<{ ok: boolean; errors: string[] }> => {
   const errors: string[] = [];
   
