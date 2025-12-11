@@ -19,6 +19,6 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ["@ffmpeg/ffmpeg", "@ffmpeg/core"]
+    include: ["@ffmpeg/ffmpeg", "@ffmpeg/core-mt"]
   }
 });

@@ -9,6 +9,7 @@ type CoreSource =
   | { coreURL: string; wasmURL: string; workerURL: string; label: string };
 
 const CORE_VERSION = "0.12.10";
+const CORE_PACKAGE = "@ffmpeg/core-mt";
 
 const buildCoreSources = (): CoreSource[] => {
   const sources: CoreSource[] = [];
@@ -20,8 +21,8 @@ const buildCoreSources = (): CoreSource[] => {
     });
   }
   sources.push(
-    { base: `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/esm`, label: "unpkg esm" },
-    { base: `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/esm`, label: "jsdelivr esm" }
+    { base: `https://unpkg.com/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`, label: "unpkg esm" },
+    { base: `https://cdn.jsdelivr.net/npm/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`, label: "jsdelivr esm" }
   );
   return sources;
 };
