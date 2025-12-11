@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node scripts/generate-sitemap.js",
+    "build": "echo \"FFMPEG_BASE=$VITE_FFMPEG_BASE_URL\" && tsc && vite build && node scripts/generate-sitemap.js",
     "preview": "vite preview",
     "start:serve": "vite preview --host 0.0.0.0 --port 4173",
     "lint": "eslint . --ext .ts,.tsx"
