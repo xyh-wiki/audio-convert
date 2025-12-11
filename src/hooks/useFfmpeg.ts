@@ -11,16 +11,37 @@ type CoreSource =
 const CORE_VERSION = "0.12.10";
 const CORE_PACKAGE = "@ffmpeg/core";
 
+const makeLocalBase = (): string => {
+  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
+  if (typeof globalThis === "undefined") {
+    return `/ffmpeg/esm`;
+  }
+  const location = (globalThis as any).location;
+  if (!location?.origin) {
+    return `/ffmpeg/esm`;
+  }
+  const origin = location.origin;
+  const root = new URL(base, origin);
+  return new URL("ffmpeg/esm/", root).href.replace(/\/$/, "");
+};
+
 const buildCoreSources = (): CoreSource[] => {
   const sources: CoreSource[] = [];
   const customBase = import.meta.env.VITE_FFMPEG_BASE_URL?.trim();
   if (customBase) {
     sources.push({
-      base: customBase.replace(/\/$/, ""),
+      base: customBase.replace(/\/?$/, ""),
       label: "custom ffmpeg base",
       includeWorker: false
     });
   }
+
+  sources.push({
+    base: makeLocalBase(),
+    label: "local ffmpeg assets",
+    includeWorker: false
+  });
+
   sources.push(
     {
       base: `https://unpkg.com/${CORE_PACKAGE}@${CORE_VERSION}/dist/esm`,

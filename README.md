@@ -33,7 +33,7 @@ pnpm preview   # serve built assets locally
 - For very large (1-2 GB+) videos, ensure sufficient free RAM and avoid heavy multitasking.
 
 ## Deployment
-`pnpm build` outputs a static `dist/` directory suitable for any static host or CDN (Netlify, Vercel static, Cloudflare Pages, S3, etc.). FFmpeg.wasm bundles are fetched on-demand from public CDNs, so no custom server or headers are required.
+`pnpm build` outputs a static `dist/` directory suitable for any static host or CDN (Netlify, Vercel static, Cloudflare Pages, S3, etc.). During the build we automatically copy `@ffmpeg/core`'s `ffmpeg-core.js/.wasm` into `dist/ffmpeg/esm/`, so the deployed site可以直接通过 `/ffmpeg/esm/` 路径加载核心文件，无需额外的网络请求。如果仍然需要自定义 CDN，可以设置 `VITE_FFMPEG_BASE_URL` 来覆盖。
 
 ### Custom FFmpeg core location
 By default the app pulls the standard FFmpeg core (`@ffmpeg/core`) from unpkg/jsDelivr. To serve it from your own CDN, set `VITE_FFMPEG_BASE_URL` (example: `https://cdn.example.com/@ffmpeg/core@0.12.10/dist/esm`) before running `pnpm build`. The app will try that base URL first, then fall back to the public CDNs.
