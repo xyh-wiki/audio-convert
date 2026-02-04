@@ -1,6 +1,1 @@
-fasfasdfsda
-fsadfsda
-
-fasdfasdf
-
-远程测试
+select 1;
