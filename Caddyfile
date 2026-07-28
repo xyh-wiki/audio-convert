@@ -1,11 +1,16 @@
 :3000 {
   encode gzip
-  root * /app/dist
 
   header {
     Cross-Origin-Opener-Policy "same-origin"
     Cross-Origin-Embedder-Policy "require-corp"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
   }
+
+  respond /healthz "ok" 200
+
+  root * /app/dist
 
   @wasm {
     path *.wasm

@@ -8,26 +8,29 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "echo \"FFMPEG_BASE=$VITE_FFMPEG_BASE_URL\" && tsc && vite build && node scripts/copy-ffmpeg-assets.js && node scripts/generate-sitemap.js",
+    "build": "tsc && vite build && node scripts/copy-ffmpeg-assets.js",
     "preview": "vite preview",
     "start:serve": "vite preview --host 0.0.0.0 --port 4173",
     "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
-    "@ffmpeg/core-mt": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "clsx": "^2.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
-    "eslint": "^8.53.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^17.8.0",
     "typescript": "^5.2.2",
     "vite": "^7.2.7"
   }

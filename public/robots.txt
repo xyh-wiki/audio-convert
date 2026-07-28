@@ -1,4 +1,4 @@
+# The public page is not pre-rendered yet. Keep it out of search results until
+# the production rendering and sitemap prerequisites documented in README are met.
 User-agent: *
-Allow: /
-Sitemap: https://audio-convert.xyh.wiki/sitemap.xml
-# Crawl-delay: 10
+Disallow: /

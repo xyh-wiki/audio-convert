@@ -1,46 +1,69 @@
-# audio-convert | Online Audio & Video Converter (100% Browser)
+# audio-convert | 浏览器端音视频转换器
 
-Private, front-end only audio and video converter built with React, TypeScript, and Vite. All work happens inside your browser using FFmpeg.wasm - no uploads, no accounts.
+私有、纯前端的音视频转换器，基于 React、TypeScript、Vite 和 FFmpeg.wasm。媒体只在浏览器中处理，不上传、不创建账户。
 
-## Features
-- Audio <-> Audio, Video <-> Video, Video -> Audio extraction.
-- Presets (High / Balanced / Small), bitrate + sample rate, mono/stereo, resolution + fps.
-- Trim start/end, simple volume adjustment, queue with progress + cancel, download outputs.
-- Supported targets: MP3, WAV, FLAC, AAC, OGG, M4A, OPUS, MP4, WebM, MOV, MKV (plus more in lists).
-- SEO-ready single page with hero, how-it-works, supported formats, FAQ, and about.
+当前交付状态：可本地构建和运行，尚未部署；公开搜索收录默认关闭，原因见“SEO 与发布”。
 
-## Getting started
+## 已实现能力
+
+- 音频转音频、视频转视频、视频提取音频。
+- 高质量、均衡、小文件预设，以及码率、采样率、声道、分辨率、帧率、裁剪和音量控制。
+- 串行转换队列、进度、当前任务取消、失败/取消重试与下载。
+- 每队列最多 20 个文件、每文件最多 2 GB；在浏览器端拒绝空文件与不支持的媒体类型。
+- MP3、WAV、FLAC、AAC、OGG、M4A、OPUS、MP4、WebM、MOV、MKV 等常用输出格式。
+
+不提供云端保存、账户、服务端转换或 DRM 绕过；具体编解码器能否成功取决于 FFmpeg.wasm 构建和浏览器资源。
+
+## 本地开发
+
 ```bash
-pnpm install   # or npm install / yarn install
-pnpm dev       # starts Vite dev server
-pnpm build     # type-check + production build
-pnpm preview   # serve built assets locally
+npm ci
+npm run dev
+npm run build
 ```
 
-## Project structure
+## 项目结构
 - `src/App.tsx` - top-level layout and sections.
 - `src/components/` - UI sections (hero, converter, FAQ, etc.).
-- `src/hooks/useFfmpeg.ts` - lazy-loaded FFmpeg.wasm bridge for browser-side transcoding.
-- `src/hooks/useConversionQueue.ts` - task queue, progress, cancel, retry.
+- `src/hooks/useFfmpeg.ts` - 从同源静态资源加载 FFmpeg.wasm，并执行浏览器端转换。
+- `src/hooks/useConversionQueue.ts` - 串行任务队列、进度、取消、重试与内存释放。
+- `src/utils/media.ts` - 输入校验、队列限制与文件大小显示。
 - `src/services/i18n.tsx` - simple locale switcher (EN/zh placeholder).
 - `src/utils/` - presets, options, ids.
 - `index.html` - SEO meta tags, Open Graph/Twitter, JSON-LD.
 
-## Usage notes
-- First conversion triggers FFmpeg.wasm load (downloads the core from `unpkg.com`). Keep the tab active; large files may take time and memory.
-- All processing stays in the browser. Temporary data is cleared when you close the tab.
-- Format/codec success depends on your browser/hardware. MP4 (H.264 + AAC) and MP3/WAV are the most reliable outputs.
-- For very large (1-2 GB+) videos, ensure sufficient free RAM and avoid heavy multitasking.
+## 使用说明
 
-## Deployment
-`pnpm build` outputs a static `dist/` directory suitable for any static host or CDN (Netlify, Vercel static, Cloudflare Pages, S3, etc.). During the build we automatically copy `@ffmpeg/core`'s `ffmpeg-core.js/.wasm` into `dist/ffmpeg/esm/`, so the deployed site可以直接通过 `/ffmpeg/esm/` 路径加载核心文件，无需额外的网络请求。如果仍然需要自定义 CDN，可以设置 `VITE_FFMPEG_BASE_URL` 来覆盖。
+- 首次转换会从同源 `/ffmpeg/esm/` 加载 FFmpeg.wasm；请保持标签页处于活动状态，大文件会占用较多内存。
+- 所有处理都在浏览器中完成，刷新或关闭页面会清除临时数据与下载结果。
+- 编解码器兼容性取决于浏览器和硬件；MP4（H.264/AAC）及 MP3/WAV 的成功率通常最高。
 
-### Custom FFmpeg core location
-By default the app pulls the standard FFmpeg core (`@ffmpeg/core`) from unpkg/jsDelivr. To serve it from your own CDN, set `VITE_FFMPEG_BASE_URL` (example: `https://cdn.example.com/@ffmpeg/core@0.12.10/dist/esm`) before running `pnpm build`. The app will try that base URL first, then fall back to the public CDNs.
+## 构建与本地验证
 
-## Accessibility & SEO
-- Semantic sections (header/main/footer), keyboard-friendly controls, high-contrast buttons.
-- `<title>`, `<meta description>`, Open Graph/Twitter tags, and WebApplication JSON-LD are preconfigured in `index.html`.
+```bash
+pnpm install
+pnpm lint
+pnpm build
+pnpm run start:serve
+```
+
+`npm run build` 会复制 FFmpeg ESM 核心到 `dist/ffmpeg/esm/`。生产运行由 `Dockerfile` 中的 Caddy 提供，包含 COOP、COEP、健康检查和静态资源缓存策略。
+
+## Dokploy 部署
+
+在 Dokploy 创建 Dockerfile 应用，仓库根目录为构建上下文，内部端口配置为 `3000`，域名配置为 `audio-convert.xyh.wiki`。应用无数据库、卷或迁移；回滚时在 Dokploy 切回上一镜像即可。不要额外启动宿主机 Caddy 占用 80/443，入口 HTTPS 应由 Dokploy 管理。
+
+部署后至少检查：`/healthz` 返回 200、响应含 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: require-corp`，以及一次实际的 FFmpeg 转换。
+
+## SEO 与发布
+
+正式域名预设为 `https://audio-convert.xyh.wiki/`，已用于 canonical、Open Graph 和结构化数据。公开正文仍为客户端渲染，因此还不是可安全收录的状态；`index.html` 和 `public/robots.txt` 继续强制 `noindex`。正式公开发布前，必须采用预渲染/SSG 输出公开正文、提供分享图片、生成仅含真实可收录 URL 的 sitemap，并完成移动端、渲染后 HTML 和分享预览检查后才移除 noindex。
+
+## 文档
+
+- [功能说明](docs/BUSINESS_SPEC.md)
+- [技术开发说明](docs/TECHNICAL_DEVELOPMENT.md)
+- [部署与运维说明](docs/OPERATIONS.md)
 
 ## Limitations
 - Browser-only processing means performance is tied to your CPU/GPU. There is no server fall-back.

@@ -1,0 +1,7 @@
+.git
+.ssh
+node_modules
+dist
+docs
+*.md
+npm-debug.log*
