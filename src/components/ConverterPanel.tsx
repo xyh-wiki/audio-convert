@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useMemo, useRef, useState } from "react";
 import { useConversionQueue } from "../hooks/useConversionQueue";
 import { useI18n } from "../services/i18n";
@@ -12,17 +11,12 @@ import {
   videoOutputFormats
 } from "../utils/options";
 import { ConversionMode, ConversionTask, OutputFormat } from "../types";
+import { formatFileSize, getConversionMode, MAX_FILES_PER_BATCH, validateFiles } from "../utils/media";
 
 const modeLabel: Record<ConversionMode, string> = {
   audio: "Audio -> Audio",
   video: "Video -> Video",
   extract: "Video -> Audio"
-};
-
-const getDefaultMode = (file: File): ConversionMode => {
-  if (file.type.startsWith("audio/")) return "audio";
-  if (file.type.startsWith("video/")) return "video";
-  return "audio";
 };
 
 const inferOutput = (mode: ConversionMode): OutputFormat => {
@@ -31,9 +25,6 @@ const inferOutput = (mode: ConversionMode): OutputFormat => {
 };
 
 export const ConverterPanel: React.FC = () => {
-  // eslint-disable-next-line no-console
-  console.log("[ConverterPanel] Component mounted/rendered");
-  
   const {
     tasks,
     addTask,
@@ -44,41 +35,24 @@ export const ConverterPanel: React.FC = () => {
     startTask,
     startAll,
     updateTask,
-    isReady,
     isLoading,
     lastError
   } = useConversionQueue();
   const { t } = useI18n();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Debug: log when lastError changes
-  React.useEffect(() => {
-    if (lastError) {
-      // eslint-disable-next-line no-console
-      console.log("[ConverterPanel] lastError:", lastError);
-    }
-  }, [lastError]);
 
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
-    if (tasks.length >= 1) {
-      // eslint-disable-next-line no-console
-      console.warn("[ConverterPanel] Only one file can be converted at a time.");
-      return;
-    }
-    const file = Array.from(fileList)[0];
-    if (!file) return;
-    const mode = getDefaultMode(file);
-    addTask({ file, mode, targetFormat: inferOutput(mode) });
-  };
-
-  const handleDownload = (task: ConversionTask) => {
-    // allow download to start, then reset queue
-    setTimeout(() => {
-      clearQueue();
-    }, 0);
+    const { accepted, errors } = validateFiles(Array.from(fileList), tasks.length);
+    setFileErrors(errors);
+    accepted.forEach((file) => {
+      const mode = getConversionMode(file);
+      if (!mode) return;
+      addTask({ file, mode, targetFormat: inferOutput(mode) });
+    });
   };
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -125,9 +99,7 @@ export const ConverterPanel: React.FC = () => {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>{task.file.name}</div>
             <div style={{ color: "#6b7280", fontSize: 13 }}>
-              {(task.sizeBefore ?? 0) / 1024 ** 2 < 0.1
-                ? `${task.sizeBefore ?? 0} bytes`
-                : `${((task.sizeBefore ?? 0) / 1024 ** 2).toFixed(2)} MB`}{" "}
+              {formatFileSize(task.sizeBefore ?? 0)}{" "}
               - {task.file.type || "Unknown"} - {modeLabel[task.mode]}
             </div>
           </div>
@@ -135,6 +107,7 @@ export const ConverterPanel: React.FC = () => {
             className="button ghost"
             onClick={() => removeTask(task.id)}
             aria-label="Remove file from queue"
+            disabled={isProcessing}
           >
             x
           </button>
@@ -161,6 +134,7 @@ export const ConverterPanel: React.FC = () => {
                     color: task.mode === mode ? "var(--accent-strong)" : "inherit"
                   }}
                   onClick={() => updateMode(task, mode)}
+                  disabled={isProcessing || task.status === "queued"}
                 >
                   {modeLabel[mode]}
                 </button>
@@ -172,6 +146,7 @@ export const ConverterPanel: React.FC = () => {
             <select
               value={task.targetFormat}
               onChange={(e) => updateTask(task.id, { targetFormat: e.target.value as OutputFormat })}
+              disabled={isProcessing || task.status === "queued"}
               style={{
                 padding: "12px 10px",
                 borderRadius: 10,
@@ -209,6 +184,7 @@ export const ConverterPanel: React.FC = () => {
                 border: "1px solid var(--border)",
                 fontWeight: 600
               }}
+              disabled={isProcessing || task.status === "queued"}
             >
               {presets.map((preset) => (
                 <option key={preset.id} value={preset.id}>
@@ -394,7 +370,7 @@ export const ConverterPanel: React.FC = () => {
           <button
             className="button primary"
             onClick={() => startTask(task.id)}
-            disabled={isProcessing || task.status === "processing"}
+            disabled={!canStart}
             aria-label="Start conversion"
           >
             {canStart ? t("start") : "Queued"}
@@ -407,7 +383,7 @@ export const ConverterPanel: React.FC = () => {
             <button
               className="button secondary"
               onClick={() => retryTask(task.id)}
-              disabled={task.status === "idle"}
+              disabled={!(["error", "canceled"].includes(task.status))}
             >
               {t("retry")}
             </button>
@@ -418,7 +394,6 @@ export const ConverterPanel: React.FC = () => {
               href={task.outputUrl}
               download={task.outputName}
               aria-label={`Download ${task.outputName}`}
-              onClick={() => handleDownload(task)}
             >
               {t("download")}
             </a>
@@ -453,11 +428,6 @@ export const ConverterPanel: React.FC = () => {
             onDrop={onDrop}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
-            role="button"
-            tabIndex={0}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
-            aria-label={t("dropTitle")}
             style={{
               marginTop: 12,
               border: `2px dashed ${isDragging ? "var(--accent)" : "var(--border)"}`,
@@ -465,23 +435,44 @@ export const ConverterPanel: React.FC = () => {
               padding: "26px",
               background: isDragging ? "rgba(15,118,110,0.05)" : "transparent",
               textAlign: "center",
-              cursor: "pointer"
+              cursor: "default"
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 18 }}>{t("dropTitle")}</div>
             <div style={{ color: "#6b7280", marginTop: 6 }}>{t("dropHint")}</div>
             <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 14 }}>
-              <button className="button primary">{t("ctaStart")}</button>
-              <button className="button secondary">Browse files</button>
+              <button className="button primary" type="button" onClick={() => inputRef.current?.click()}>
+                {t("ctaStart")}
+              </button>
+              <button className="button secondary" type="button" onClick={() => inputRef.current?.click()}>
+                Browse files
+              </button>
             </div>
             <input
               ref={inputRef}
               type="file"
               multiple
+              accept="audio/*,video/*,.oga,.aiff,.mkv,.flv,.wmv"
               style={{ display: "none" }}
-              onChange={(e) => handleFiles(e.target.files)}
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.currentTarget.value = "";
+              }}
             />
           </div>
+
+          <p style={{ color: "#6b7280", margin: "10px 0 0", fontSize: 13 }}>
+            Up to {MAX_FILES_PER_BATCH} files per queue; individual files must be 2 GB or smaller.
+          </p>
+
+          {fileErrors.length > 0 && (
+            <div className="card" style={{ marginTop: 12, padding: 12, borderLeft: "4px solid #f97316", background: "#fff7ed" }} role="alert">
+              <strong>Some files were not added.</strong>
+              <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
+                {fileErrors.map((error) => <li key={error}>{error}</li>)}
+              </ul>
+            </div>
+          )}
 
           {lastError && (
             <div
@@ -516,11 +507,7 @@ export const ConverterPanel: React.FC = () => {
 
           {tasks.length > 0 && (
             <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button className="button primary" onClick={() => {
-                // eslint-disable-next-line no-console
-                console.log("[ConverterPanel] Convert all button clicked, tasks:", tasks.length);
-                startAll();
-              }} disabled={isLoading}>
+              <button className="button primary" onClick={startAll} disabled={isLoading}>
                 Convert all
               </button>
               {isLoading && <div>Loading FFmpeg (first run)...</div>}

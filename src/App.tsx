@@ -12,7 +12,7 @@ import { Footer } from "./components/Footer";
 const App: React.FC = () => (
   <>
     <Header />
-    <main>
+    <main id="main-content">
       <Hero />
       <ConverterPanel />
       <SupportedFormats />

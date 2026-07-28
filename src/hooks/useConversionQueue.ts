@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { nanoid } from "../utils/nanoid";
 import { ConversionTask, OutputFormat, PresetId } from "../types";
 import { useFfmpeg } from "./useFfmpeg";
@@ -15,10 +15,9 @@ type AddTaskArgs = {
 export const useConversionQueue = () => {
   const [tasks, setTasks] = useState<ConversionTask[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const canceledTaskId = useRef<string | null>(null);
+  const tasksRef = useRef<ConversionTask[]>([]);
   const { convert, cancel, isReady, isLoading, lastError } = useFfmpeg();
-
-  // eslint-disable-next-line no-console
-  console.log("[useConversionQueue] Hook initialized, isReady:", isReady, "isLoading:", isLoading);
 
   const addTask = useCallback(
     ({ file, mode, targetFormat, preset = "balanced", options = {} }: AddTaskArgs) => {
@@ -43,14 +42,7 @@ export const useConversionQueue = () => {
         message: "Waiting",
         sizeBefore: file.size
       };
-      setTasks((prev) => {
-        if (prev.length >= 1) {
-          // eslint-disable-next-line no-console
-          console.warn("[useConversionQueue] Only one task allowed at a time.");
-          return prev;
-        }
-        return [...prev, task];
-      });
+      setTasks((prev) => [...prev, task]);
     },
     []
   );
@@ -59,38 +51,70 @@ export const useConversionQueue = () => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
   }, []);
 
-  const removeTask = useCallback((id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  const revokeOutput = useCallback((url?: string) => {
+    if (url) URL.revokeObjectURL(url);
   }, []);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  const removeTask = useCallback(
+    (id: string) => {
+      setTasks((prev) => {
+        const task = prev.find((item) => item.id === id);
+        revokeOutput(task?.outputUrl);
+        return prev.filter((item) => item.id !== id);
+      });
+    },
+    [revokeOutput]
+  );
 
   const retryTask = useCallback(
     (id: string) => {
       setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: "queued", progress: 0 } : t))
+        prev.map((task) => {
+          if (task.id !== id || !["error", "canceled"].includes(task.status)) return task;
+          revokeOutput(task.outputUrl);
+          return {
+            ...task,
+            outputUrl: undefined,
+            outputName: undefined,
+            sizeAfter: undefined,
+            status: "queued",
+            progress: 0,
+            message: "Queued"
+          };
+        })
+      );
+    },
+    [revokeOutput]
+  );
+
+  const startTask = useCallback(
+    (id: string) => {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === id && ["idle", "error", "canceled"].includes(task.status)
+            ? { ...task, status: "queued", message: "Queued", progress: 0 }
+            : task
+        )
       );
     },
     []
   );
 
-  const startTask = useCallback(
-    (id: string) => {
-      updateTask(id, { status: "queued", message: "Queued" });
-    },
-    [updateTask]
-  );
-
   const startAll = useCallback(() => {
-    // eslint-disable-next-line no-console
-    console.log("[useConversionQueue] startAll called");
     setTasks((prev) =>
       prev.map((t) =>
-        t.status === "completed"
-          ? t
-          : {
+        ["idle", "error", "canceled"].includes(t.status)
+          ? {
               ...t,
               status: "queued",
-              message: "Queued"
+              message: "Queued",
+              progress: 0
             }
+          : t
       )
     );
   }, []);
@@ -103,46 +127,59 @@ export const useConversionQueue = () => {
       setActiveId(next.id);
       updateTask(next.id, { status: "processing", message: "Processing..." });
       try {
-        // eslint-disable-next-line no-console
-        console.log("[useConversionQueue] Starting conversion for", next.id);
         const result = await convert(next, (progress) =>
           updateTask(next.id, { progress, status: "processing", message: "Converting..." })
         );
-        // eslint-disable-next-line no-console
-        console.log("[useConversionQueue] Conversion completed for", next.id);
-        updateTask(next.id, {
-          progress: 100,
-          status: "completed",
-          message: "Completed",
-          outputUrl: result.url,
-          outputName: `${next.file.name.split(".")[0]}.${next.targetFormat}`,
-          sizeAfter: result.size
-        });
+        if (canceledTaskId.current !== next.id) {
+          updateTask(next.id, {
+            progress: 100,
+            status: "completed",
+            message: "Completed",
+            outputUrl: result.url,
+            outputName: `${next.file.name.replace(/\.[^.]+$/, "")}.${next.targetFormat}`,
+            sizeAfter: result.size
+          });
+        } else {
+          revokeOutput(result.url);
+        }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error("[useConversionQueue] Conversion error for", next.id, error);
+        if (canceledTaskId.current === next.id) return;
         const message =
           error instanceof Error
             ? error.message
             : "Conversion failed. This format may not be supported in your browser.";
         updateTask(next.id, { status: "error", message, progress: 0 });
       } finally {
+        if (canceledTaskId.current === next.id) canceledTaskId.current = null;
         setActiveId(null);
       }
     };
     run();
-  }, [activeId, convert, tasks, updateTask]);
+  }, [activeId, convert, revokeOutput, tasks, updateTask]);
 
   const cancelTask = useCallback(
     async (id: string) => {
+      if (id !== activeId) return;
+      canceledTaskId.current = id;
       updateTask(id, { status: "canceled", message: "Canceled by user" });
       await cancel();
-      setActiveId(null);
     },
-    [cancel, updateTask]
+    [activeId, cancel, updateTask]
   );
 
-  const clearQueue = useCallback(() => setTasks([]), []);
+  const clearQueue = useCallback(() => {
+    setTasks((prev) => {
+      prev.forEach((task) => revokeOutput(task.outputUrl));
+      return activeId ? prev.filter((task) => task.id === activeId) : [];
+    });
+  }, [activeId, revokeOutput]);
+
+  useEffect(
+    () => () => {
+      tasksRef.current.forEach((task) => revokeOutput(task.outputUrl));
+    },
+    [revokeOutput]
+  );
 
   return useMemo(
     () => ({

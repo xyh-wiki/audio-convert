@@ -1,14 +1,18 @@
 export const MIME_TYPE_JAVASCRIPT = "text/javascript";
 export const MIME_TYPE_WASM = "application/wasm";
 export const CORE_VERSION = "0.12.9";
-const coreBase = (() => {
+export const CORE_URL = (() => {
+    // Prefer bundled asset URL when available.
+    if (import.meta.env?.VITE_FFMPEG_CORE_URL) {
+        return import.meta.env.VITE_FFMPEG_CORE_URL;
+    }
     const base = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
     const origin = typeof globalThis !== "undefined" && globalThis.location?.origin
         ? globalThis.location.origin
         : "http://localhost";
-    return new URL("ffmpeg/esm/", new URL(base, origin)).href;
+    const coreBase = new URL("ffmpeg/esm/", new URL(base, origin)).href;
+    return `${coreBase}ffmpeg-core.js`;
 })();
-export const CORE_URL = `${coreBase}ffmpeg-core.js`;
 export var FFMessageType;
 (function (FFMessageType) {
     FFMessageType["LOAD"] = "LOAD";

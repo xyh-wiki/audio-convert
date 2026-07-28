@@ -22,7 +22,8 @@ export const Header: React.FC = () => {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
+          <a
+            href="#main-content"
             style={{
               width: 36,
               height: 36,
@@ -38,7 +39,7 @@ export const Header: React.FC = () => {
             aria-label="AV Converter logo"
           >
             AV
-          </div>
+          </a>
           <div>
             <div style={{ fontWeight: 800 }}>Browser Converter</div>
             <div style={{ fontSize: 12, color: "#6b7280" }}>Private. Local. Fast.</div>
