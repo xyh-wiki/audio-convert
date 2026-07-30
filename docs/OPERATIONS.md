@@ -17,11 +17,11 @@ Dokploy 使用仓库根目录的 `Dockerfile` 构建镜像。构建阶段以 Nod
 - 健康检查路径：`/healthz`
 - 无需挂载卷或配置数据库
 
-在 Dokploy 将容器端口发布到仅本机可访问的端口，例如 `127.0.0.1:18083:3000`。然后在 `/data/configs/caddy/Caddyfile` 添加该域名的受管站点块，并反向代理到 `127.0.0.1:18083`；配置校验成功后执行 Caddy reload。该步骤会让 Caddy 为域名签发/加载证书。不要将 3000 或 18083 直接发布到公网。
+在 Dokploy 的 Advanced → Ports 中将应用发布为 `18083`（published port）、`host`（published port mode）、`3000`（target port）与 `tcp`（protocol）。宿主机防火墙必须仅允许回环流量访问 `18083`。然后在 `/data/configs/caddy/Caddyfile` 添加该域名的受管站点块，并反向代理到 `127.0.0.1:18083`；配置校验成功后执行 Caddy reload。该步骤会让 Caddy 为域名签发/加载证书。不要将 3000 或 18083 直接发布到公网。
 
 ## 验证与回滚
 
-部署后确认 `https://audio-convert.xyh.wiki/healthz` 返回 200，首页响应包含 COOP/COEP，且浏览器可以完成一次媒体转换。若失败，在 Dokploy 选择上一部署镜像回滚；如入口配置发生变更，应同时回滚对应 Caddy 路由。本应用不包含需恢复的数据。
+部署后确认 `https://audio-convert.xyh.wiki/healthz` 返回 `200` 与正文 `ok`，首页响应包含 COOP/COEP，且浏览器可以完成一次媒体转换。若失败，在 Dokploy 选择上一部署镜像回滚；如入口配置发生变更，应同时回滚对应 Caddy 路由。本应用不包含需恢复的数据。
 
 ## 资源与安全
 
