@@ -17,7 +17,7 @@
 
 ## 构建与运行
 
-`npm run build` 依次执行 TypeScript 检查、Vite 客户端构建、Vite SSR 构建与 `scripts/prerender.mjs` 首页预渲染，再把 `@ffmpeg/core` 的 ESM 资产复制到 `dist/ffmpeg/esm/`。`src/entry-server.tsx` 只在构建期调用 `renderToString`；浏览器检测到预渲染标记后使用 `hydrateRoot` 接管交互。`Dockerfile` 使用 Node 22 构建、Caddy 2 运行静态产物；镜像创建普通 `app` 用户，并在 3000 端口提供 COOP/COEP、安全响应头和 `/healthz`（正文为 `ok`）。`route` 块固定健康响应先于 SPA 回退执行。在 `xyh-dep`，宿主机 Caddy 负责公网 TLS，并通过本机 `18083` 转发给 Swarm `ingress` 发布端口；Docker `DOCKER-USER` 规则拒绝非回环来源。
+`npm run build` 依次执行 TypeScript 检查、Vite 客户端构建、Vite SSR 构建与 `scripts/prerender.mjs` 首页预渲染，再把 `@ffmpeg/core` 的 ESM 资产复制到 `dist/ffmpeg/esm/`。`src/entry-server.tsx` 只在构建期调用 `renderToString`；浏览器检测到预渲染标记后使用 `hydrateRoot` 接管交互。`Dockerfile` 使用 Node 22 构建、Caddy 2 运行静态产物；镜像创建普通 `app` 用户，并在容器 3000 端口提供 COOP/COEP、安全响应头和 `/healthz`（正文为 `ok`）。`route` 块固定健康响应先于 SPA 回退执行。在 `miles-01`，Dokploy Traefik 是唯一公网入口，通过 Docker 网络将域名流量直接转发到该容器的 3000 端口；应用不再使用宿主机 Caddy、发布端口或端口守卫规则。Dokploy 管理面 `3000` 独立由 `DOCKER-USER` 持久规则限制为本机访问。
 
 ## 测试映射
 
@@ -27,6 +27,6 @@
 
 ## SEO 与安全
 
-生产域名预设为 `https://audio-convert.xyh.wiki/`，并已写入 canonical、Open Graph URL、`Audio Convert` 品牌分享图、favicon 与 WebApplication JSON-LD。页面使用系统字体，不在运行时加载第三方字体。首页由构建期 SSG 生成，初始 HTML 中包含工作区的唯一 H1、功能说明和语义化操作区；`index.html` 使用 `index, follow`，`robots.txt` 声明 sitemap，`sitemap.xml` 仅包含规范首页。发布后仍须验证渲染后 HTML、移动端、分享预览、断链和 Search Console 抓取状态。
+生产域名预设为 `https://audio-convert.xyh.wiki/`，并已写入 canonical、Open Graph URL、`Audio Convert` 品牌分享图、WebApplication JSON-LD 与多格式图标：`favicon-48.png` 是浏览器和搜索结果使用的主图标（符合 Google 的 48 像素倍数要求），`apple-touch-icon.png` 用于 iOS；SVG 标识仍供站点界面和分享资产复用。页面使用系统字体，不在运行时加载第三方字体。`index.html` 以 `defer` 加载自托管的 `https://umami.xyh.wiki/script.js`，并使用网站 ID `93a87f55-9c36-4b6d-acbf-408a4a00cd93` 统计访问；该跨源脚本以匿名 CORS 模式加载，以兼容生产环境的 COEP 响应头。网站 ID 不是认证秘密，但 Umami 服务端数据与访问权限必须由部署方保护，并按适用地区提供统计告知。首页由构建期 SSG 生成，初始 HTML 中包含工作区的唯一 H1、功能说明和语义化操作区；`index.html` 使用 `index, follow`，`robots.txt` 声明 sitemap，`sitemap.xml` 仅包含规范首页。发布后仍须验证渲染后 HTML、移动端、分享预览、断链和 Search Console 抓取状态。
 
 媒体不会离开浏览器；应用不包含秘密或上传 API。FFmpeg 资源仅从已打包/本地路径加载，部署时应保留 COOP/COEP，并审核第三方依赖的许可证和安全更新。输出文件名在下载前剥离路径和平台保留字符；转换失败仅向用户呈现通用原因与恢复建议，不回显 FFmpeg 内部参数或堆栈。
