@@ -34,7 +34,7 @@ export const videoInputFormats: VideoFormat[] = [
   "wmv"
 ];
 
-export const videoOutputFormats: VideoFormat[] = ["mp4", "webm", "mkv", "mov"];
+export const videoOutputFormats: VideoFormat[] = ["mp4", "webm", "mkv", "mov", "gif"];
 
 export const presets: PresetConfig[] = [
   {

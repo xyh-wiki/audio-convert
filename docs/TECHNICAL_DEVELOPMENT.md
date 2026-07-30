@@ -1,19 +1,19 @@
 # 技术开发说明
 
-版本：1.2（对应当前工作区代码）
+版本：1.3（对应当前工作区代码）
 维护规则：更改转换生命周期、工作区交互、FFmpeg 资源、配置或公开页面元数据时同步更新本文和 README。
 
 ## 架构与入口
 
 应用采用 React 18、TypeScript 和 Vite 构建为静态单页应用。`src/main.tsx` 提供 React 根，`src/App.tsx` 提供覆盖完整视口的应用外壳。转换器 UI 位于 `src/components/ConverterPanel.tsx`：左侧是导入区与队列，中间只编辑选中的任务，右侧提供批次预设、下载操作和格式参考；媒体输入校验位于 `src/utils/media.ts`；队列生命周期位于 `src/hooks/useConversionQueue.ts`；FFmpeg.wasm 适配层位于 `src/hooks/useFfmpeg.ts`。
 
-依赖方向为 `ConverterPanel → useConversionQueue → useFfmpeg`。UI 不直接调用 FFmpeg。队列拥有任务状态和下载 URL，FFmpeg hook 只负责加载、执行、进度与终止。`addTask` 返回任务 ID，供工作区在导入后选中首个新增任务；批次预设只调用现有任务更新接口，不改变任务顺序或运行中的参数。
+依赖方向为 `ConverterPanel → useConversionQueue → useFfmpeg`。UI 不直接调用 FFmpeg。`src/utils/media.ts` 负责文件输入校验、输出文件名清理、预检提示和用户可行动失败建议。队列拥有任务状态、顺序和下载 URL，FFmpeg hook 只负责加载、执行、进度与终止。`addTask` 返回任务 ID，供工作区在导入后选中首个新增任务；批次预设和命名只调用现有任务更新接口。
 
 ## 任务与失败模型
 
-任务以 `ConversionTask` 描述输入文件、模式、目标格式、选项和状态。队列通过 `activeId` 确保一次只有一个任务执行；`canceledTaskId` 阻止终止 FFmpeg 后的异步拒绝被误写为错误。输出 Blob URL 的所有权属于队列：移除、清空、重试及组件卸载时调用 `URL.revokeObjectURL`。
+任务以 `ConversionTask` 描述输入文件、模式、目标格式、输出基础名、选项和状态。队列通过 `activeId` 确保一次只有一个任务执行；`canceledTaskId` 阻止终止 FFmpeg 后的异步拒绝被误写为错误。只有 `idle`、`error` 和 `canceled` 状态允许调整队列顺序。输出 Blob URL 的所有权属于队列：移除、清空、重试及组件卸载时调用 `URL.revokeObjectURL`。
 
-输入边界在 UI 前校验：最多 20 项、非空、最大 2 GB，且 MIME 或扩展名必须属于允许的音视频列表。这是浏览器内存保护，不代表服务端文件安全策略（本项目没有上传端点）。
+输入边界在 UI 前校验：最多 20 项、非空、最大 2 GB，且 MIME 或扩展名必须属于允许的音视频列表。这是浏览器内存保护，不代表服务端文件安全策略（本项目没有上传端点）。任务启动前还会检查剪辑区间；大文件、低设备内存、同格式输出与 GIF 输出仅作为用户可忽略的风险提示。默认预设和命名后缀经 `localStorage` 保存，内容不是秘密且不包含文件名、队列或转换结果。
 
 ## 构建与运行
 
@@ -29,4 +29,4 @@
 
 生产域名预设为 `https://audio-convert.xyh.wiki/`，并已写入 canonical、Open Graph URL、`Audio Convert` 品牌分享图、favicon 与 WebApplication JSON-LD。页面使用系统字体，不在运行时加载第三方字体。首页由构建期 SSG 生成，初始 HTML 中包含工作区的唯一 H1、功能说明和语义化操作区；`index.html` 使用 `index, follow`，`robots.txt` 声明 sitemap，`sitemap.xml` 仅包含规范首页。发布后仍须验证渲染后 HTML、移动端、分享预览、断链和 Search Console 抓取状态。
 
-媒体不会离开浏览器；应用不包含秘密或上传 API。FFmpeg 资源仅从已打包/本地路径加载，部署时应保留 COOP/COEP，并审核第三方依赖的许可证和安全更新。
+媒体不会离开浏览器；应用不包含秘密或上传 API。FFmpeg 资源仅从已打包/本地路径加载，部署时应保留 COOP/COEP，并审核第三方依赖的许可证和安全更新。输出文件名在下载前剥离路径和平台保留字符；转换失败仅向用户呈现通用原因与恢复建议，不回显 FFmpeg 内部参数或堆栈。

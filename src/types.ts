@@ -13,7 +13,7 @@ export type AudioFormat =
   | "alac"
   | "aiff";
 
-export type VideoFormat = "mp4" | "webm" | "mkv" | "mov" | "avi" | "flv" | "wmv";
+export type VideoFormat = "mp4" | "webm" | "mkv" | "mov" | "avi" | "flv" | "wmv" | "gif";
 
 export type OutputFormat = AudioFormat | VideoFormat;
 
@@ -42,6 +42,9 @@ export type AdvancedOptions = {
   trimEnd?: number;
   volume?: number;
   vbr?: boolean;
+  normalizeAudio?: boolean;
+  rotation?: "none" | "90" | "180" | "270";
+  mirror?: boolean;
 };
 
 export type ConversionTask = {
@@ -56,6 +59,7 @@ export type ConversionTask = {
   message?: string;
   outputUrl?: string;
   outputName?: string;
+  outputBaseName: string;
   sizeBefore?: number;
   sizeAfter?: number;
 };

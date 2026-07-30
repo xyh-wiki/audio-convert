@@ -40,29 +40,40 @@ const mimeByFormat: Record<OutputFormat, string> = {
   mov: "video/quicktime",
   avi: "video/x-msvideo",
   flv: "video/x-flv",
-  wmv: "video/x-ms-wmv"
+  wmv: "video/x-ms-wmv",
+  gif: "image/gif"
 };
 
 const buildArgs = (inputName: string, outputName: string, task: ConversionTask): string[] => {
-  const args: string[] = ["-i", inputName];
+  const args: string[] = [];
   const options: AdvancedOptions = task.options;
 
   if (typeof options.trimStart === "number") args.push("-ss", `${options.trimStart}`);
+  args.push("-i", inputName);
   if (typeof options.trimEnd === "number" && typeof options.trimStart === "number") {
     args.push("-t", `${Math.max(options.trimEnd - options.trimStart, 0)}`);
   }
-  if (options.volume && options.volume !== 1) args.push("-filter:a", `volume=${options.volume}`);
+  const audioFilters: string[] = [];
+  if (options.volume && options.volume !== 1) audioFilters.push(`volume=${options.volume}`);
+  if (options.normalizeAudio) audioFilters.push("loudnorm=I=-16:TP=-1.5:LRA=11");
+  if (audioFilters.length && task.targetFormat !== "gif") args.push("-filter:a", audioFilters.join(","));
 
   const audioBitrate = options.audioBitrate ?? options.bitrate;
   if (audioBitrate) args.push("-b:a", `${audioBitrate}k`);
   if (options.sampleRate) args.push("-ar", `${options.sampleRate}`);
   if (options.channels) args.push("-ac", `${options.channels}`);
-  if (task.mode === "audio" || task.mode === "extract") args.push("-vn");
+  if (task.mode === "audio" || task.mode === "extract" || task.targetFormat === "gif") args.push("-vn");
 
   if (task.mode === "video") {
-    if (options.videoBitrate) args.push("-b:v", `${options.videoBitrate}k`);
+    if (options.videoBitrate && task.targetFormat !== "gif") args.push("-b:v", `${options.videoBitrate}k`);
     if (options.fps) args.push("-r", `${options.fps}`);
     if (options.resolution && options.resolution !== "original") args.push("-s", options.resolution);
+    const videoFilters: string[] = [];
+    if (options.rotation === "90") videoFilters.push("transpose=1");
+    if (options.rotation === "180") videoFilters.push("hflip,vflip");
+    if (options.rotation === "270") videoFilters.push("transpose=2");
+    if (options.mirror) videoFilters.push("hflip");
+    if (videoFilters.length) args.push("-vf", videoFilters.join(","));
     if (options.vbr) args.push("-q:v", "2");
     else if (options.videoBitrate) {
       args.push("-minrate", `${options.videoBitrate}k`, "-maxrate", `${options.videoBitrate}k`);

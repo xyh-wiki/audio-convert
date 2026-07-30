@@ -3,6 +3,7 @@ import { nanoid } from "../utils/nanoid";
 import { ConversionTask, OutputFormat, PresetId } from "../types";
 import { useFfmpeg } from "./useFfmpeg";
 import { presets } from "../utils/options";
+import { createOutputName, getFailureAdvice, getFileBaseName } from "../utils/media";
 
 type AddTaskArgs = {
   file: File;
@@ -40,6 +41,7 @@ export const useConversionQueue = () => {
         progress: 0,
         status: "idle",
         message: "等待开始",
+        outputBaseName: getFileBaseName(file.name),
         sizeBefore: file.size
       };
       setTasks((prev) => [...prev, task]);
@@ -137,7 +139,7 @@ export const useConversionQueue = () => {
             status: "completed",
             message: "已完成",
             outputUrl: result.url,
-            outputName: `${next.file.name.replace(/\.[^.]+$/, "")}.${next.targetFormat}`,
+            outputName: createOutputName(next.outputBaseName, next.targetFormat),
             sizeAfter: result.size
           });
         } else {
@@ -145,11 +147,12 @@ export const useConversionQueue = () => {
         }
       } catch (error) {
         if (canceledTaskId.current === next.id) return;
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Conversion failed. This format may not be supported in your browser.";
-        updateTask(next.id, { status: "error", message, progress: 0 });
+        const rawMessage = error instanceof Error ? error.message : "未知转换错误";
+        updateTask(next.id, {
+          status: "error",
+          message: `转换未完成。${getFailureAdvice(rawMessage, next)}`,
+          progress: 0
+        });
       } finally {
         if (canceledTaskId.current === next.id) canceledTaskId.current = null;
         setActiveId(null);
@@ -175,6 +178,18 @@ export const useConversionQueue = () => {
     });
   }, [activeId, revokeOutput]);
 
+  const moveTask = useCallback((id: string, direction: -1 | 1) => {
+    setTasks((prev) => {
+      const index = prev.findIndex((task) => task.id === id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev;
+      if (!["idle", "error", "canceled"].includes(prev[index].status)) return prev;
+      const next = [...prev];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  }, []);
+
   useEffect(
     () => () => {
       tasksRef.current.forEach((task) => revokeOutput(task.outputUrl));
@@ -190,6 +205,7 @@ export const useConversionQueue = () => {
       retryTask,
       removeTask,
       clearQueue,
+      moveTask,
       startTask,
       startAll,
       updateTask,
@@ -204,6 +220,7 @@ export const useConversionQueue = () => {
       isLoading,
       isReady,
       lastError,
+      moveTask,
       removeTask,
       retryTask,
       startAll,

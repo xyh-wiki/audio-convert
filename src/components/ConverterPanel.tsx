@@ -10,7 +10,14 @@ import {
   videoOutputFormats
 } from "../utils/options";
 import { ConversionMode, ConversionTask, OutputFormat, PresetId } from "../types";
-import { formatFileSize, getConversionMode, MAX_FILES_PER_BATCH, validateFiles } from "../utils/media";
+import {
+  formatFileSize,
+  getConversionMode,
+  getFileBaseName,
+  getPreflightWarnings,
+  MAX_FILES_PER_BATCH,
+  validateFiles
+} from "../utils/media";
 
 const modeLabels: Record<ConversionMode, string> = {
   audio: "音频转换",
@@ -49,15 +56,27 @@ export const ConverterPanel: React.FC = () => {
     startTask,
     startAll,
     updateTask,
+    moveTask,
     isLoading,
     lastError
   } = useConversionQueue();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [downloadNote, setDownloadNote] = useState<string | null>(null);
+  const [defaultPreset, setDefaultPreset] = useState<PresetId>(() => {
+    if (typeof window === "undefined") return "balanced";
+    const stored = window.localStorage.getItem("audio-convert.default-preset");
+    return stored === "high" || stored === "small" || stored === "balanced" ? stored : "balanced";
+  });
+  const [nameSuffix, setNameSuffix] = useState(() =>
+    typeof window === "undefined" ? "" : window.localStorage.getItem("audio-convert.name-suffix") ?? ""
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedTask = tasks.find((task) => task.id === selectedId) ?? null;
+  const preflightWarnings = selectedTask ? getPreflightWarnings(selectedTask) : [];
+  const hasBlockingPreflight = tasks.some((task) => getPreflightWarnings(task).some((warning) => warning.includes("结束时间")));
   const formatsByMode = useMemo(
     () => ({ audio: audioOutputFormats, extract: audioOutputFormats, video: videoOutputFormats }),
     []
@@ -82,6 +101,14 @@ export const ConverterPanel: React.FC = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    window.localStorage.setItem("audio-convert.default-preset", defaultPreset);
+  }, [defaultPreset]);
+
+  useEffect(() => {
+    window.localStorage.setItem("audio-convert.name-suffix", nameSuffix);
+  }, [nameSuffix]);
+
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
     const { accepted, errors } = validateFiles(Array.from(fileList), tasks.length);
@@ -90,7 +117,7 @@ export const ConverterPanel: React.FC = () => {
     accepted.forEach((file) => {
       const mode = getConversionMode(file);
       if (!mode) return;
-      const id = addTask({ file, mode, targetFormat: inferOutput(mode) });
+      const id = addTask({ file, mode, targetFormat: inferOutput(mode), preset: defaultPreset });
       if (file === nextTask) setSelectedId(id);
     });
   };
@@ -120,10 +147,17 @@ export const ConverterPanel: React.FC = () => {
       link.download = task.outputName ?? task.file.name;
       link.click();
     });
+    setDownloadNote("已请求下载全部结果；浏览器可能会要求允许多个文件下载。");
   };
 
   const clearCompleted = () => {
     tasks.filter((task) => task.status === "completed").forEach((task) => removeTask(task.id));
+  };
+
+  const applyNameSuffix = () => {
+    tasks
+      .filter((task) => ["idle", "error", "canceled"].includes(task.status))
+      .forEach((task) => updateTask(task.id, { outputBaseName: `${getFileBaseName(task.file.name)}${nameSuffix}` }));
   };
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -144,7 +178,7 @@ export const ConverterPanel: React.FC = () => {
           <button className="button secondary" type="button" onClick={() => inputRef.current?.click()}>
             添加文件 <kbd>⌘ / Ctrl O</kbd>
           </button>
-          <button className="button primary" type="button" onClick={startAll} disabled={summary.active > 0 || tasks.length === 0}>
+          <button className="button primary" type="button" onClick={startAll} disabled={summary.active > 0 || tasks.length === 0 || hasBlockingPreflight}>
             {summary.active > 0 ? "正在处理队列" : "转换全部"}
           </button>
         </div>
@@ -185,6 +219,7 @@ export const ConverterPanel: React.FC = () => {
             </div>
           )}
           {lastError && <div className="inline-alert" role="alert"><strong>FFmpeg：</strong>{lastError}</div>}
+          {downloadNote && <div className="inline-notice" role="status">{downloadNote}</div>}
 
           <div className="queue-toolbar">
             <h2>队列</h2>
@@ -197,13 +232,9 @@ export const ConverterPanel: React.FC = () => {
           <div className="task-list" aria-live="polite">
             {tasks.length === 0 ? (
               <p className="empty-queue">尚未添加文件。选择一个音频或视频文件开始。</p>
-            ) : tasks.map((task) => (
-              <button
-                key={task.id}
-                type="button"
-                className={`task-row ${selectedId === task.id ? "is-selected" : ""}`}
-                onClick={() => setSelectedId(task.id)}
-              >
+            ) : tasks.map((task, index) => (
+              <div key={task.id} className={`task-row ${selectedId === task.id ? "is-selected" : ""}`}>
+              <button type="button" className="task-select" onClick={() => setSelectedId(task.id)}>
                 <span className="task-row-main">
                   <strong title={task.file.name}>{task.file.name}</strong>
                   <small>{formatFileSize(task.sizeBefore ?? task.file.size)} · {modeLabels[task.mode]}</small>
@@ -211,6 +242,11 @@ export const ConverterPanel: React.FC = () => {
                 <span className={`status status-${task.status}`}>{statusLabels[task.status]}</span>
                 {task.status === "processing" && <span className="task-progress" style={{ "--progress": `${task.progress}%` } as React.CSSProperties} />}
               </button>
+              <div className="task-order" aria-label={`${task.file.name} 的队列顺序`}>
+                <button type="button" className="order-button" onClick={() => moveTask(task.id, -1)} disabled={index === 0 || !["idle", "error", "canceled"].includes(task.status)} aria-label="上移">↑</button>
+                <button type="button" className="order-button" onClick={() => moveTask(task.id, 1)} disabled={index === tasks.length - 1 || !["idle", "error", "canceled"].includes(task.status)} aria-label="下移">↓</button>
+              </div>
+              </div>
             ))}
           </div>
         </aside>
@@ -228,6 +264,7 @@ export const ConverterPanel: React.FC = () => {
               onCancel={() => cancelTask(selectedTask.id)}
               onRetry={() => retryTask(selectedTask.id)}
               onRemove={() => removeTask(selectedTask.id)}
+              preflightWarnings={preflightWarnings}
             />
           ) : (
             <div className="editor-empty">
@@ -251,6 +288,12 @@ export const ConverterPanel: React.FC = () => {
                 </button>
               ))}
             </div>
+            <label className="preference-select"><span>新文件默认预设</span><select value={defaultPreset} onChange={(event) => setDefaultPreset(event.target.value as PresetId)}>{presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
+          </section>
+          <section className="naming-panel">
+            <h2>批量命名</h2>
+            <p>为未开始、失败或已取消的任务追加相同后缀。</p>
+            <div><input aria-label="文件名后缀" value={nameSuffix} maxLength={40} placeholder="例如 -converted" onChange={(event) => setNameSuffix(event.target.value)} /><button className="button secondary" type="button" onClick={applyNameSuffix} disabled={tasks.length === 0 || nameSuffix.trim().length === 0}>应用</button></div>
           </section>
           <section className="download-panel">
             <h2>结果</h2>
@@ -282,9 +325,10 @@ type TaskEditorProps = {
   onCancel: () => void;
   onRetry: () => void;
   onRemove: () => void;
+  preflightWarnings: string[];
 };
 
-const TaskEditor: React.FC<TaskEditorProps> = ({ task, formats, onModeChange, onPresetChange, onUpdate, onOptionChange, onStart, onCancel, onRetry, onRemove }) => {
+const TaskEditor: React.FC<TaskEditorProps> = ({ task, formats, onModeChange, onPresetChange, onUpdate, onOptionChange, onStart, onCancel, onRetry, onRemove, preflightWarnings }) => {
   const isProcessing = task.status === "processing";
   const locked = isProcessing || task.status === "queued";
   const canStart = ["idle", "error", "canceled"].includes(task.status);
@@ -313,6 +357,11 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ task, formats, onModeChange, on
       </fieldset>
 
       <div className="settings-grid">
+        <label className="output-name-field">
+          <span>输出文件名</span>
+          <input value={task.outputBaseName} maxLength={120} disabled={locked} onChange={(event) => onUpdate({ outputBaseName: event.target.value })} />
+          <small>将自动添加 .{task.targetFormat} 扩展名</small>
+        </label>
         <label>
           <span>输出格式</span>
           <select value={task.targetFormat} onChange={(event) => onUpdate({ targetFormat: event.target.value as OutputFormat })} disabled={locked}>
@@ -334,12 +383,17 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ task, formats, onModeChange, on
           <label><span>采样率</span><select value={task.options.sampleRate ?? ""} disabled={locked} onChange={(event) => onOptionChange({ sampleRate: event.target.value ? Number(event.target.value) : undefined })}><option value="">保持原始</option>{sampleRatePresets.map((value) => <option key={value} value={value}>{value / 1000} kHz</option>)}</select></label>
           <label><span>声道</span><select value={task.options.channels ?? ""} disabled={locked} onChange={(event) => onOptionChange({ channels: event.target.value ? Number(event.target.value) as 1 | 2 : undefined })}><option value="">自动</option><option value="1">单声道</option><option value="2">立体声</option></select></label>
           <label><span>音量</span><div className="range-control"><input type="range" min="0.2" max="2" step="0.1" value={task.options.volume ?? 1} disabled={locked} onChange={(event) => onOptionChange({ volume: Number(event.target.value) })} /><output>{(task.options.volume ?? 1).toFixed(1)}×</output></div></label>
+          <label className="toggle-setting"><span>响度标准化</span><input type="checkbox" checked={task.options.normalizeAudio ?? false} disabled={locked} onChange={(event) => onOptionChange({ normalizeAudio: event.target.checked })} /><small>将音频调整到适合日常聆听的响度</small></label>
           <label><span>起始时间（秒）</span><input type="number" min="0" placeholder="从头开始" value={task.options.trimStart ?? ""} disabled={locked} onChange={(event) => onOptionChange({ trimStart: event.target.value ? Number(event.target.value) : undefined })} /></label>
           <label><span>结束时间（秒）</span><input type="number" min="0" placeholder="到结尾" value={task.options.trimEnd ?? ""} disabled={locked} onChange={(event) => onOptionChange({ trimEnd: event.target.value ? Number(event.target.value) : undefined })} /></label>
           <label className={!supportsVideo ? "is-disabled" : ""}><span>分辨率</span><select value={task.options.resolution ?? "original"} disabled={locked || !supportsVideo} onChange={(event) => onOptionChange({ resolution: event.target.value })}>{resolutionPresets.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
           <label className={!supportsVideo ? "is-disabled" : ""}><span>帧率</span><select value={task.options.fps ?? ""} disabled={locked || !supportsVideo} onChange={(event) => onOptionChange({ fps: event.target.value ? Number(event.target.value) : undefined })}><option value="">保持原始</option>{frameRatePresets.map((value) => <option key={value} value={value}>{value} fps</option>)}</select></label>
+          <label className={!supportsVideo ? "is-disabled" : ""}><span>旋转</span><select value={task.options.rotation ?? "none"} disabled={locked || !supportsVideo} onChange={(event) => onOptionChange({ rotation: event.target.value as "none" | "90" | "180" | "270" })}><option value="none">不旋转</option><option value="90">顺时针 90°</option><option value="180">旋转 180°</option><option value="270">逆时针 90°</option></select></label>
+          <label className={`toggle-setting ${!supportsVideo ? "is-disabled" : ""}`}><span>水平镜像</span><input type="checkbox" checked={task.options.mirror ?? false} disabled={locked || !supportsVideo} onChange={(event) => onOptionChange({ mirror: event.target.checked })} /><small>左右翻转画面</small></label>
         </div>
       </details>
+
+      {preflightWarnings.length > 0 && <div className="inline-alert preflight-alert" role="status"><strong>转换前提示</strong><ul>{preflightWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
 
       <div className="editor-footer">
         <div className="conversion-status">
@@ -348,7 +402,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({ task, formats, onModeChange, on
         </div>
         <div className="progress-track"><span style={{ width: `${task.progress}%` }} /></div>
         <div className="editor-actions">
-          {canStart && <button type="button" className="button primary" onClick={onStart}>开始转换</button>}
+          {canStart && <button type="button" className="button primary" onClick={onStart} disabled={preflightWarnings.some((warning) => warning.includes("结束时间"))}>开始转换</button>}
           {isProcessing && <button type="button" className="button secondary" onClick={onCancel}>取消转换</button>}
           {["error", "canceled"].includes(task.status) && <button type="button" className="button secondary" onClick={onRetry}>重新加入队列</button>}
           {task.status === "completed" && task.outputUrl && <a className="button primary" href={task.outputUrl} download={task.outputName}>下载文件</a>}
