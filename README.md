@@ -51,7 +51,9 @@ pnpm run start:serve
 
 ## Dokploy 部署
 
-在 Dokploy 创建 Dockerfile 应用，仓库根目录为构建上下文，内部端口配置为 `3000`，域名配置为 `audio-convert.xyh.wiki`。应用无数据库、卷或迁移；回滚时在 Dokploy 切回上一镜像即可。不要额外启动宿主机 Caddy 占用 80/443，入口 HTTPS 应由 Dokploy 管理。
+在 Dokploy 创建 Dockerfile 应用，仓库根目录为构建上下文，容器端口配置为 `3000`，域名配置为 `audio-convert.xyh.wiki`。应用无数据库、卷或迁移；回滚时在 Dokploy 切回上一镜像即可。
+
+`xyh-dep` 当前由宿主机 Caddy 统一占用 `80/443` 并签发证书，因此 Dokploy 应用还必须发布一个仅供本机使用的端口（例如 `127.0.0.1:18083:3000`），再由受管 Caddy 添加 `audio-convert.xyh.wiki` 到该端口的反向代理。不要额外启动第二个监听公网 `80/443` 的 Caddy，也不要把应用端口直接暴露到公网。
 
 部署后至少检查：`/healthz` 返回 200、响应含 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: require-corp`，以及一次实际的 FFmpeg 转换。
 

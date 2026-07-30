@@ -5,21 +5,23 @@
 
 ## 部署模型
 
-Dokploy 使用仓库根目录的 `Dockerfile` 构建镜像。构建阶段以 Node 22 执行 `npm ci` 和 `npm run build`；运行阶段使用 Caddy 2 在容器 3000 端口提供 `dist/`。应用没有数据库、持久卷、迁移或秘密环境变量。
+Dokploy 使用仓库根目录的 `Dockerfile` 构建镜像。构建阶段以 Node 22 执行 `npm ci` 和 `npm run build`；运行阶段使用 Caddy 2 在容器 3000 端口提供 `dist/`，并以镜像内创建的普通 `app` 用户运行。应用没有数据库、持久卷、迁移或秘密环境变量。
 
-Dokploy 负责公网 HTTPS 和域名路由；应用容器只监听内部端口 3000。不要同时部署宿主机 Caddy 以监听相同公网端口。
+`xyh-dep` 的公网 `80/443` 由既有宿主机 Caddy 统一管理，负责 HTTPS 证书与域名路由；应用容器只监听 3000。不要新增另一个监听公网 `80/443` 的 Caddy。
 
 ## Dokploy 配置
 
 - 构建方式：Dockerfile
-- 内部端口：`3000`
+- 容器端口：`3000`
 - 域名：`audio-convert.xyh.wiki`
 - 健康检查路径：`/healthz`
 - 无需挂载卷或配置数据库
 
+在 Dokploy 将容器端口发布到仅本机可访问的端口，例如 `127.0.0.1:18083:3000`。然后在 `/data/configs/caddy/Caddyfile` 添加该域名的受管站点块，并反向代理到 `127.0.0.1:18083`；配置校验成功后执行 Caddy reload。该步骤会让 Caddy 为域名签发/加载证书。不要将 3000 或 18083 直接发布到公网。
+
 ## 验证与回滚
 
-部署后确认 `/healthz` 返回 200，首页响应包含 COOP/COEP，且浏览器可以完成一次媒体转换。若失败，在 Dokploy 选择上一部署镜像回滚；本应用不包含需恢复的数据。
+部署后确认 `https://audio-convert.xyh.wiki/healthz` 返回 200，首页响应包含 COOP/COEP，且浏览器可以完成一次媒体转换。若失败，在 Dokploy 选择上一部署镜像回滚；如入口配置发生变更，应同时回滚对应 Caddy 路由。本应用不包含需恢复的数据。
 
 ## 资源与安全
 

@@ -17,7 +17,7 @@
 
 ## 构建与运行
 
-`npm run build` 依次执行 TypeScript 检查、Vite 生产构建，并把 `@ffmpeg/core` 的 ESM 资产复制到 `dist/ffmpeg/esm/`。`Dockerfile` 使用 Node 22 构建、Caddy 2 运行静态产物；Caddy 在 3000 端口提供 COOP/COEP、安全响应头和 `/healthz`。构建产物未在本任务中部署。
+`npm run build` 依次执行 TypeScript 检查、Vite 生产构建，并把 `@ffmpeg/core` 的 ESM 资产复制到 `dist/ffmpeg/esm/`。`Dockerfile` 使用 Node 22 构建、Caddy 2 运行静态产物；镜像创建普通 `app` 用户，并在 3000 端口提供 COOP/COEP、安全响应头和 `/healthz`。在 `xyh-dep`，宿主机 Caddy 负责公网 TLS，并通过仅本机发布的 Dokploy 端口转发给该容器。
 
 ## 测试映射
 
