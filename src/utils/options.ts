@@ -39,24 +39,24 @@ export const videoOutputFormats: VideoFormat[] = ["mp4", "webm", "mkv", "mov"];
 export const presets: PresetConfig[] = [
   {
     id: "high",
-    label: "High Quality",
-    description: "Best for mastering or archiving",
+    label: "高质量",
+    description: "适合归档或保留更多细节",
     bitrate: 320,
     audioBitrate: 320,
     videoBitrate: 6000
   },
   {
     id: "balanced",
-    label: "Balanced",
-    description: "Great quality with moderate size",
+    label: "均衡",
+    description: "质量与体积的日常平衡",
     bitrate: 192,
     audioBitrate: 192,
     videoBitrate: 3500
   },
   {
     id: "small",
-    label: "Small File",
-    description: "Optimized for faster transfers",
+    label: "小文件",
+    description: "适合传输和节省空间",
     bitrate: 128,
     audioBitrate: 128,
     videoBitrate: 2000
@@ -64,7 +64,7 @@ export const presets: PresetConfig[] = [
 ];
 
 export const resolutionPresets = [
-  { label: "Keep original", value: "original" },
+  { label: "保持原始", value: "original" },
   { label: "1080p", value: "1920x1080" },
   { label: "720p", value: "1280x720" },
   { label: "480p", value: "854x480" }

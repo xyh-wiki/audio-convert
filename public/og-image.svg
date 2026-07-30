@@ -1,14 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs>
-    <linearGradient id="g" x1="0" x2="1">
-      <stop offset="0" stop-color="#0f766e"/>
-      <stop offset="1" stop-color="#06b6d4"/>
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" fill="#0f172a" />
-  <rect x="40" y="40" width="1120" height="550" rx="20" fill="url(#g)" opacity="0.95" />
-  <text x="100" y="220" font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#fff" font-weight="700">Audio Convert</text>
-  <text x="100" y="300" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#eef2ff">Free in-browser audio & video converter — MP3, WAV, MP4, WebM</text>
-  <rect x="100" y="360" width="520" height="80" rx="10" fill="#082431" opacity="0.5" />
-  <text x="120" y="410" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#fff">100% client-side — no uploads, private</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#edf2ee"/>
+  <path d="M0 496h1200" stroke="#cdd9d4" stroke-width="2"/>
+  <rect x="72" y="72" width="108" height="108" fill="#14211f"/>
+  <path d="M94 132c10 0 10-16 20-16s10 16 20 16 10-16 20-16" stroke="#d7f0e7" stroke-width="8" stroke-linecap="round"/>
+  <path d="M145 94h14v14m0-14-22 22" stroke="#5cc9ad" stroke-width="6"/>
+  <text x="72" y="268" fill="#14211f" font-family="Arial, Helvetica, sans-serif" font-size="80" font-weight="700">Audio Convert</text>
+  <text x="72" y="328" fill="#52635d" font-family="Arial, Helvetica, sans-serif" font-size="30">在浏览器中完成音频与视频转换，文件不会上传。</text>
+  <rect x="72" y="402" width="314" height="54" fill="#d8eee6"/>
+  <text x="94" y="437" fill="#075f52" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">LOCAL PROCESSING · NO UPLOAD</text>
+  <text x="72" y="550" fill="#52635d" font-family="Arial, Helvetica, sans-serif" font-size="22">MP3 · WAV · FLAC · MP4 · WebM</text>
 </svg>

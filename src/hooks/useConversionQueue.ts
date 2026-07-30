@@ -39,10 +39,11 @@ export const useConversionQueue = () => {
         },
         progress: 0,
         status: "idle",
-        message: "Waiting",
+        message: "等待开始",
         sizeBefore: file.size
       };
       setTasks((prev) => [...prev, task]);
+      return task.id;
     },
     []
   );
@@ -83,7 +84,7 @@ export const useConversionQueue = () => {
             sizeAfter: undefined,
             status: "queued",
             progress: 0,
-            message: "Queued"
+            message: "等待中"
           };
         })
       );
@@ -96,7 +97,7 @@ export const useConversionQueue = () => {
       setTasks((prev) =>
         prev.map((task) =>
           task.id === id && ["idle", "error", "canceled"].includes(task.status)
-            ? { ...task, status: "queued", message: "Queued", progress: 0 }
+            ? { ...task, status: "queued", message: "等待中", progress: 0 }
             : task
         )
       );
@@ -111,7 +112,7 @@ export const useConversionQueue = () => {
           ? {
               ...t,
               status: "queued",
-              message: "Queued",
+              message: "等待中",
               progress: 0
             }
           : t
@@ -125,16 +126,16 @@ export const useConversionQueue = () => {
 
     const run = async () => {
       setActiveId(next.id);
-      updateTask(next.id, { status: "processing", message: "Processing..." });
+      updateTask(next.id, { status: "processing", message: "正在准备…" });
       try {
         const result = await convert(next, (progress) =>
-          updateTask(next.id, { progress, status: "processing", message: "Converting..." })
+          updateTask(next.id, { progress, status: "processing", message: "正在转换…" })
         );
         if (canceledTaskId.current !== next.id) {
           updateTask(next.id, {
             progress: 100,
             status: "completed",
-            message: "Completed",
+            message: "已完成",
             outputUrl: result.url,
             outputName: `${next.file.name.replace(/\.[^.]+$/, "")}.${next.targetFormat}`,
             sizeAfter: result.size
@@ -161,7 +162,7 @@ export const useConversionQueue = () => {
     async (id: string) => {
       if (id !== activeId) return;
       canceledTaskId.current = id;
-      updateTask(id, { status: "canceled", message: "Canceled by user" });
+      updateTask(id, { status: "canceled", message: "已由用户取消" });
       await cancel();
     },
     [activeId, cancel, updateTask]
