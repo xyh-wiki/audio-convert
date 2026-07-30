@@ -17,7 +17,7 @@
 
 ## 构建与运行
 
-`npm run build` 依次执行 TypeScript 检查、Vite 客户端构建、Vite SSR 构建与 `scripts/prerender.mjs` 首页预渲染，再把 `@ffmpeg/core` 的 ESM 资产复制到 `dist/ffmpeg/esm/`。`src/entry-server.tsx` 只在构建期调用 `renderToString`；浏览器检测到预渲染标记后使用 `hydrateRoot` 接管交互。`Dockerfile` 使用 Node 22 构建、Caddy 2 运行静态产物；镜像创建普通 `app` 用户，并在 3000 端口提供 COOP/COEP、安全响应头和 `/healthz`（正文为 `ok`）。`route` 块固定健康响应先于 SPA 回退执行。在 `xyh-dep`，宿主机 Caddy 负责公网 TLS，并通过仅本机发布的 Dokploy 端口转发给该容器。
+`npm run build` 依次执行 TypeScript 检查、Vite 客户端构建、Vite SSR 构建与 `scripts/prerender.mjs` 首页预渲染，再把 `@ffmpeg/core` 的 ESM 资产复制到 `dist/ffmpeg/esm/`。`src/entry-server.tsx` 只在构建期调用 `renderToString`；浏览器检测到预渲染标记后使用 `hydrateRoot` 接管交互。`Dockerfile` 使用 Node 22 构建、Caddy 2 运行静态产物；镜像创建普通 `app` 用户，并在 3000 端口提供 COOP/COEP、安全响应头和 `/healthz`（正文为 `ok`）。`route` 块固定健康响应先于 SPA 回退执行。在 `xyh-dep`，宿主机 Caddy 负责公网 TLS，并通过本机 `18083` 转发给 Swarm `ingress` 发布端口；Docker `DOCKER-USER` 规则拒绝非回环来源。
 
 ## 测试映射
 

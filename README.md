@@ -64,7 +64,7 @@ pnpm run start:serve
 
 在 Dokploy 创建 Dockerfile 应用，仓库根目录为构建上下文，容器端口配置为 `3000`，域名配置为 `audio-convert.xyh.wiki`。应用无数据库、卷或迁移；回滚时在 Dokploy 切回上一镜像即可。
 
-`xyh-dep` 当前由宿主机 Caddy 统一占用 `80/443` 并签发证书。Dokploy 的 Advanced → Ports 配置为 published port `18083`、mode `host`、target port `3000`、protocol `tcp`；宿主机防火墙只允许回环流量访问该端口，受管 Caddy 再将 `audio-convert.xyh.wiki` 反向代理到 `127.0.0.1:18083`。不要额外启动第二个监听公网 `80/443` 的 Caddy，也不要把应用端口直接暴露到公网。
+`xyh-dep` 当前由宿主机 Caddy 统一占用 `80/443` 并签发证书。Dokploy 的 Advanced → Ports 配置为 published port `18083`、mode `ingress`、target port `3000`、protocol `tcp`，并维持 `start-first` 更新顺序；Swarm 可先启动并验证新任务，再移除旧任务，避免单节点 `host` 模式的端口冲突和发布中断。宿主机防火墙只允许回环流量访问该端口，受管 Caddy 再将 `audio-convert.xyh.wiki` 反向代理到 `127.0.0.1:18083`。不要额外启动第二个监听公网 `80/443` 的 Caddy，也不要把应用端口直接暴露到公网。
 
 部署后至少检查：`/healthz` 返回 `200` 与正文 `ok`、首页响应含 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: require-corp`，以及一次实际的 FFmpeg 转换。
 
