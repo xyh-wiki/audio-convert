@@ -2,6 +2,7 @@
 .ssh
 node_modules
 dist
+.ssr
 docs
 *.md
 npm-debug.log*

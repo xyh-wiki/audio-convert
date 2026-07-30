@@ -1,13 +1,17 @@
 import React from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/global.css";
-import { I18nProvider } from "./services/i18n";
 
-createRoot(document.getElementById("root") as HTMLElement).render(
+const root = document.getElementById("root") as HTMLElement;
+const app = (
   <React.StrictMode>
-    <I18nProvider>
-      <App />
-    </I18nProvider>
+    <App />
   </React.StrictMode>
 );
+
+if (root.hasChildNodes()) {
+  hydrateRoot(root, app);
+} else {
+  createRoot(root).render(app);
+}

@@ -2,13 +2,16 @@
 
 私有、纯前端的音视频转换器，基于 React、TypeScript、Vite 和 FFmpeg.wasm。媒体只在浏览器中处理，不上传、不创建账户。
 
-当前交付状态：可本地构建和运行，尚未部署；公开搜索收录默认关闭，原因见“SEO 与发布”。
+当前交付状态：已具备 Dokploy 部署入口；首页在构建期预渲染，可供公开搜索收录。
 
 ## 已实现能力
 
 - 音频转音频、视频转视频、视频提取音频。
 - 高质量、均衡、小文件预设，以及码率、采样率、声道、分辨率、帧率、裁剪和音量控制。
 - 串行转换队列、进度、当前任务取消、失败/取消重试与下载。
+- 完整视口的转换工作区：拖放导入、队列选择、每个任务的参数编辑、批量预设、批量下载和已完成任务清理。
+- `Ctrl/⌘ + O` 快捷选择文件；转换设置始终以选中的单个任务为准，避免批量任务参数混淆。
+- 基础品牌资产：`Audio Convert` 名称、统一 SVG 标识、favicon 与分享图。
 - 每队列最多 20 个文件、每文件最多 2 GB；在浏览器端拒绝空文件与不支持的媒体类型。
 - MP3、WAV、FLAC、AAC、OGG、M4A、OPUS、MP4、WebM、MOV、MKV 等常用输出格式。
 
@@ -23,12 +26,14 @@ npm run build
 ```
 
 ## 项目结构
-- `src/App.tsx` - top-level layout and sections.
-- `src/components/` - UI sections (hero, converter, FAQ, etc.).
+
+- `src/App.tsx` - 全视口应用外壳。
+- `src/components/ConverterPanel.tsx` - 三栏转换工作区、队列操作和单任务编辑器。
+- `src/components/Header.tsx`、`Footer.tsx` - 应用导航和按需使用说明。
+- `public/logo-mark.svg`、`favicon.svg`、`og-image.svg` - 站点标识、浏览器图标与分享图。
 - `src/hooks/useFfmpeg.ts` - 从同源静态资源加载 FFmpeg.wasm，并执行浏览器端转换。
 - `src/hooks/useConversionQueue.ts` - 串行任务队列、进度、取消、重试与内存释放。
 - `src/utils/media.ts` - 输入校验、队列限制与文件大小显示。
-- `src/services/i18n.tsx` - simple locale switcher (EN/zh placeholder).
 - `src/utils/` - presets, options, ids.
 - `index.html` - SEO meta tags, Open Graph/Twitter, JSON-LD.
 
@@ -37,6 +42,8 @@ npm run build
 - 首次转换会从同源 `/ffmpeg/esm/` 加载 FFmpeg.wasm；请保持标签页处于活动状态，大文件会占用较多内存。
 - 所有处理都在浏览器中完成，刷新或关闭页面会清除临时数据与下载结果。
 - 编解码器兼容性取决于浏览器和硬件；MP4（H.264/AAC）及 MP3/WAV 的成功率通常最高。
+- 点击队列项目后可编辑输出格式、质量预设和高级参数；已开始或排队中的任务会锁定参数，避免转换过程发生变化。
+- “批次操作”只会更新尚未开始、失败或已取消的任务；“下载全部”会触发所有已完成结果的浏览器下载。
 
 ## 构建与本地验证
 
@@ -53,13 +60,13 @@ pnpm run start:serve
 
 在 Dokploy 创建 Dockerfile 应用，仓库根目录为构建上下文，容器端口配置为 `3000`，域名配置为 `audio-convert.xyh.wiki`。应用无数据库、卷或迁移；回滚时在 Dokploy 切回上一镜像即可。
 
-`xyh-dep` 当前由宿主机 Caddy 统一占用 `80/443` 并签发证书，因此 Dokploy 应用还必须发布一个仅供本机使用的端口（例如 `127.0.0.1:18083:3000`），再由受管 Caddy 添加 `audio-convert.xyh.wiki` 到该端口的反向代理。不要额外启动第二个监听公网 `80/443` 的 Caddy，也不要把应用端口直接暴露到公网。
+`xyh-dep` 当前由宿主机 Caddy 统一占用 `80/443` 并签发证书。Dokploy 的 Advanced → Ports 配置为 published port `18083`、mode `host`、target port `3000`、protocol `tcp`；宿主机防火墙只允许回环流量访问该端口，受管 Caddy 再将 `audio-convert.xyh.wiki` 反向代理到 `127.0.0.1:18083`。不要额外启动第二个监听公网 `80/443` 的 Caddy，也不要把应用端口直接暴露到公网。
 
-部署后至少检查：`/healthz` 返回 200、响应含 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: require-corp`，以及一次实际的 FFmpeg 转换。
+部署后至少检查：`/healthz` 返回 `200` 与正文 `ok`、首页响应含 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: require-corp`，以及一次实际的 FFmpeg 转换。
 
 ## SEO 与发布
 
-正式域名预设为 `https://audio-convert.xyh.wiki/`，已用于 canonical、Open Graph 和结构化数据。公开正文仍为客户端渲染，因此还不是可安全收录的状态；`index.html` 和 `public/robots.txt` 继续强制 `noindex`。正式公开发布前，必须采用预渲染/SSG 输出公开正文、提供分享图片、生成仅含真实可收录 URL 的 sitemap，并完成移动端、渲染后 HTML 和分享预览检查后才移除 noindex。
+正式域名为 `https://audio-convert.xyh.wiki/`，已用于 canonical、Open Graph、结构化数据和 sitemap。`npm run build` 会预渲染首页工作区，`index.html` 初始 HTML 已包含可读正文、唯一 H1 和主要功能说明；`public/robots.txt` 允许抓取，`public/sitemap.xml` 只包含首页。发布后仍需检查移动端、渲染后 HTML、分享预览、断链和 Search Console 的实际抓取状态。
 
 ## 文档
 
