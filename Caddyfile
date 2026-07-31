@@ -12,6 +12,14 @@
 
     respond /healthz "ok" 200
 
+    # Keep the assistant same-origin so the FFmpeg.wasm COOP/COEP isolation
+    # remains valid. The upstream is the operator-controlled shared Bot.
+    handle_path /assistant/* {
+      reverse_proxy https://bot.xyh.wiki {
+        header_up Host bot.xyh.wiki
+      }
+    }
+
     root * /app/dist
 
     @wasm {

@@ -1,6 +1,6 @@
 # 部署与运维说明
 
-版本：1.1（对应当前工作区代码）
+版本：1.2（对应当前工作区代码）
 目标环境：miles-01 的 Dokploy + Traefik
 
 ## 部署模型
@@ -23,7 +23,7 @@ Dokploy 管理面监听主机 `3000`，但 Docker `DOCKER-USER` 持久规则仅�
 
 ## 验证与回滚
 
-部署后确认 `https://audio-convert.xyh.wiki/healthz` 返回 `200` 与正文 `ok`，首页响应包含 COOP/COEP，且浏览器可以完成一次媒体转换。每次发布同时确认新任务为 `healthy`、Traefik 容器运行且应用无 published port。若失败，在 Dokploy 选择上一镜像或上一部署回滚；如 DNS 已切换，保留或恢复原解析直至新入口通过验证。本应用不包含需恢复的数据。
+部署后确认 `https://audio-convert.xyh.wiki/healthz` 返回 `200` 与正文 `ok`，首页响应包含 COOP/COEP，且浏览器可以完成一次媒体转换。确认 `/assistant/static/widget.js` 返回 `200`，再在浏览器发送一次问答；该路径必须由应用容器 Caddy 同域代理到受控 Bot，不能为应用新增宿主机端口。每次发布同时确认新任务为 `healthy`、Traefik 容器运行且应用无 published port。若失败，在 Dokploy 选择上一镜像或上一部署回滚；如 DNS 已切换，保留或恢复原解析直至新入口通过验证。本应用不包含需恢复的数据。
 
 ## 资源与安全
 

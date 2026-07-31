@@ -85,6 +85,7 @@ ssh -L 3000:127.0.0.1:3000 miles-01
 - [功能说明](docs/BUSINESS_SPEC.md)
 - [技术开发说明](docs/TECHNICAL_DEVELOPMENT.md)
 - [部署与运维说明](docs/OPERATIONS.md)
+- [版本迭代记录](CHANGELOG.md)
 
 ## Limitations
 - Browser-only processing means performance is tied to your CPU/GPU. There is no server fall-back.
