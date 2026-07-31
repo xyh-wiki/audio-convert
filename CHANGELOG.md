@@ -6,6 +6,7 @@
 
 - 在公开页面接入同域知识库助手：资源和问答请求经过 `/assistant/*`，站点选择固定为 `audio-convert`。
 - 保持 FFmpeg.wasm 所需的 COOP/COEP 跨源隔离；助手资源与页面同源加载，不引入跨域脚本依赖。
+- 为 `/assistant/*` 返回 `X-Robots-Tag: noindex, nofollow, noarchive`，防止动态助手接口被收录。
 
 ## v1.3
 
