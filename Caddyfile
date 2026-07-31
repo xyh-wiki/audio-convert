@@ -23,6 +23,9 @@
     handle_path /assistant/* {
       reverse_proxy https://bot.xyh.wiki {
         header_up Host bot.xyh.wiki
+        # The browser reaches this route on the Audio Convert origin. Preserve
+        # that trusted same-origin context across the second reverse proxy.
+        header_up Sec-Fetch-Site same-origin
       }
     }
 
